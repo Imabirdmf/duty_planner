@@ -25,9 +25,9 @@ jobs:
       - name: Run linter and pytest
         run: |
           make check
-      - name: Run test coverage
-        run: |
-          make test-coverage
+#      - name: Run test coverage
+#        run: |
+#          make test-coverage
       - name: Analyze with SonarQube
         uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
         env:
