@@ -29,7 +29,7 @@ jobs:
 #        run: |
 #          make test-coverage
       - name: Analyze with SonarQube
-        uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on SonarQube, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
@@ -39,6 +39,6 @@ jobs:
           args: >
             -Dsonar.projectKey=Imabirdmf_python-project-50
             -Dsonar.organization=imabirdmf
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.coverage.exclusions=**/__init__.py,**/*scripts/*
-            -Dsonar.tests=tests
+#            -Dsonar.python.coverage.reportPaths=coverage.xml
+#            -Dsonar.coverage.exclusions=**/__init__.py,**/*scripts/*
+#            -Dsonar.tests=tests
