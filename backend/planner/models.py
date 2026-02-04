@@ -1,7 +1,7 @@
 from django.db import models
+from django.db.models import UniqueConstraint
 
 
-# Create your models here.
 class Staff(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -19,6 +19,10 @@ class Staff(models.Model):
 class DaysOff(models.Model):
     user = models.ForeignKey(Staff, on_delete=models.CASCADE)
     date = models.DateField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "date"],
+                                               name="unique_day_off")]
 
 
 class Duty(models.Model):
