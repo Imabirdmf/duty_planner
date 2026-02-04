@@ -1,5 +1,6 @@
 from django.db import models
 
+
 # Create your models here.
 class Staff(models.Model):
     first_name = models.CharField(max_length=100)
@@ -14,12 +15,15 @@ class Staff(models.Model):
     def __str__(self):
         return self.full_name
 
+
 class DaysOff(models.Model):
     user = models.ForeignKey(Staff, on_delete=models.CASCADE)
     date = models.DateField()
 
+
 class Duty(models.Model):
     date = models.DateField()
+
 
 class DutyAssignment(models.Model):
     user = models.ForeignKey(Staff, on_delete=models.CASCADE)

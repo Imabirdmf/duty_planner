@@ -5,8 +5,30 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "black>=26.1.0",
+    "django>=6.0.2",
+    "django-rest-framework>=0.1.0",
     "mypy>=1.19.1",
     "pytest>=9.0.2",
     "pytest-coverage>=0.0",
     "ruff>=0.15.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.0",
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+allow_untyped_defs = true
+disable_error_code = 'var-annotated'
+
+[tool.ruff]
+line-length = 120
+
+exclude = [
+    "__init__.py"
+]
+
+preview = true
+lint.select = ["E", "F", "I", "C90"]
