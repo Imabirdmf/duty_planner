@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from django.utils import timezone
+from planner.validators import validate_date_not_past
 
-from .models import Staff, DaysOff
+
+from .models import DaysOff, Staff, Duty
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -14,20 +15,24 @@ class StaffSerializer(serializers.ModelSerializer):
 
 
 class DaysOffSerializer(serializers.ModelSerializer):
-    def validate_date(self, value):
-        if not self.instance and value < timezone.localdate():
-            raise serializers.ValidationError(
-                "Нельзя добавить выходной в прошедшую дату"
-            )
-        return value
+    date = serializers.DateField(validators=[validate_date_not_past])
 
     class Meta:
         model = DaysOff
         fields = ("id", "date", "user")
         validators = [
-            UniqueTogetherValidator(queryset=DaysOff.objects.all(),
-                                    fields=["user", "date"],
-                                    message="У этого сотрудника уже есть выходной на указанную дату")
+            UniqueTogetherValidator(
+                queryset=DaysOff.objects.all(),
+                fields=["user", "date"],
+                message="У этого сотрудника уже есть выходной на указанную дату",
+            )
         ]
 
+
+class DutySerializer(serializers.ModelSerializer):
+    date = serializers.DateField(validators=[validate_date_not_past])
+
+    class Meta:
+        model = Duty
+        fields = ("id", "date")
 
