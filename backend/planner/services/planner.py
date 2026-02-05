@@ -4,11 +4,11 @@ from planner.models import DaysOff, Duty, DutyAssignment, Staff
 
 
 def create_plan(people_for_day=2):
-    users = [(user.priority, user.id) for user in Staff.objects.all()]
-    print(users)
     duties = Duty.objects.all()
 
     for duty in duties:
+        users = [(user.priority, user.id) for user in Staff.objects.all()]
+        print(users)
         count = 0
         print("duty", duty)
         while count < people_for_day:
