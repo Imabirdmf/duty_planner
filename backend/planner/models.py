@@ -32,3 +32,6 @@ class Duty(models.Model):
 class DutyAssignment(models.Model):
     user = models.ForeignKey(Staff, on_delete=models.CASCADE)
     duty = models.ForeignKey(Duty, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'{self.duty.date} - {self.user.id}'
