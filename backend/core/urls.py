@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
-from planner.views import DaysOffViewSet, StaffViewSet, DutyViewSet
+from planner.views import DaysOffViewSet, DutyViewSet, StaffViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
