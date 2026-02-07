@@ -61,6 +61,5 @@ class CalendarResponseSerializer(serializers.Serializer):
     dates = serializers.ListField(child=serializers.DateField())
 
 
-
 # class CalendarDaysSerializer(serializers.Serializer):
 #     duty_days = serializers.ListField(child=serializers.DateField())

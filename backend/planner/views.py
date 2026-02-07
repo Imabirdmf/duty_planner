@@ -60,8 +60,7 @@ class CalendarView(APIView):
         request_days_serialized = payload_serializer.validated_data["dates"]
         dates = save_duty_days(month_start, request_days_serialized)
 
-        data = {"month": month_start,
-                "dates": [duty.date for duty in dates]}
+        data = {"month": month_start, "dates": [duty.date for duty in dates]}
         response_serializer = CalendarResponseSerializer(data)
 
         return Response(response_serializer.data, status=status.HTTP_200_OK)
