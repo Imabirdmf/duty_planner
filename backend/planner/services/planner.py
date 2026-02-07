@@ -49,7 +49,7 @@ def get_days_off(user_id, date):
 
 
 def create_duty_assignment(user_id, duty):
-    duty_assignment, created = DutyAssignment.objects.update_or_create(
+    duty_assignment, _ = DutyAssignment.objects.update_or_create(
         user_id=user_id,
         duty=duty,
     )
