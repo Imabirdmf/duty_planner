@@ -43,7 +43,9 @@ class CalendarView(APIView):
 
         duty_dates = calendar.get_duty_days(month_start)
         dates = [d.date for d in duty_dates]
-        data = {"dates": dates}
+        data = {
+            "month": month_start,
+            "dates": dates}
 
         response_serializer = CalendarResponseSerializer(data)
         return Response(response_serializer.data, status=status.HTTP_200_OK)

@@ -57,4 +57,5 @@ class CalendarMonthQuerySerializer(serializers.Serializer):
 
 
 class CalendarResponseSerializer(serializers.Serializer):
+    month = serializers.CharField()
     dates = serializers.ListField(child=serializers.DateField())
