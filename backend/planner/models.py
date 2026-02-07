@@ -1,4 +1,5 @@
 from django.db import models
+from bulk_update_or_create import BulkUpdateOrCreateQuerySet
 
 
 class Staff(models.Model):
@@ -29,7 +30,9 @@ class DaysOff(models.Model):
 
 
 class Duty(models.Model):
-    date = models.DateField(db_index=True)
+    date = models.DateField(db_index=True, unique=True)
+
+    objects = BulkUpdateOrCreateQuerySet.as_manager()
 
     def __str__(self):
         return str(self.date)
