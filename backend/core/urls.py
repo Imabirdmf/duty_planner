@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
-from planner.views import DaysOffViewSet, DutyViewSet, StaffViewSet
+from planner.views import CalendarView, DaysOffViewSet, DutyViewSet, StaffViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -28,4 +28,5 @@ router.register("duties", DutyViewSet)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
+    path("calendar/", CalendarView.as_view()),
 ]

@@ -6,4 +6,4 @@ class Command(BaseCommand):
     help = "Generate duty plan"
 
     def handle(self, *args, **options):
-        create_plan()
+        print(create_plan())

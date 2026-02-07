@@ -17,16 +17,22 @@ class Staff(models.Model):
 
 class DaysOff(models.Model):
     user = models.ForeignKey(Staff, on_delete=models.CASCADE)
-    date = models.DateField()
+    date = models.DateField(db_index=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user", "date"], name="unique_day_off")
         ]
 
+    def __str__(self):
+        return f"{self.date} - userid: {self.user.id}"
+
 
 class Duty(models.Model):
-    date = models.DateField()
+    date = models.DateField(db_index=True)
+
+    def __str__(self):
+        return str(self.date)
 
 
 class DutyAssignment(models.Model):
@@ -34,4 +40,4 @@ class DutyAssignment(models.Model):
     duty = models.ForeignKey(Duty, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.duty.date} - {self.user.id}'
+        return f"{self.duty.date} - userid: {self.user.id}"

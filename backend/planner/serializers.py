@@ -1,3 +1,5 @@
+from datetime import date
+
 from planner.validators import validate_date_not_past
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -37,6 +39,22 @@ class DutySerializer(serializers.ModelSerializer):
 
 
 class DutyAssignmentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = DutyAssignment
         fields = ("id", "date", "user")
+
+
+class CalendarMonthQuerySerializer(serializers.Serializer):
+    month = serializers.CharField()
+
+    def validate(self, attrs):
+        value = attrs["month"]
+        year_str, month_str = value.split("-")
+        attrs["month"] = date(int(year_str), int(month_str), 1)
+
+        return attrs
+
+
+class CalendarResponseSerializer(serializers.Serializer):
+    dates = serializers.ListField(child=serializers.DateField())

@@ -4,12 +4,14 @@ from planner.models import DaysOff, Duty, DutyAssignment, Staff
 
 
 def create_plan(people_for_day=2):
+    messages = {}
     duties = Duty.objects.all().order_by("date")
-
+    staff = Staff.objects.all()
+    # если вынести за пределы цикла, надо как-то обновлять данные по приоритету внутри?
     for duty in duties:
-        users = [(user.priority, user.id) for user in Staff.objects.all()] # вытащить один раз вне цикла. после каждого проставления возвращать пользователей в хип
+        users = [(user.priority, user.id) for user in staff]
         heapq.heapify(users)
-        print(users)
+        print("очередь", users)
         count = 0
         print("duty", duty)
         while count < people_for_day:
@@ -18,22 +20,32 @@ def create_plan(people_for_day=2):
 
             user = heapq.heappop(users)
             print("user", user)
-            if not get_days_off(user[1], duty.date) and not user_has_previous_duty(user[1], duty.date):
+            if not get_days_off(user[1], duty.date) and not user_has_previous_duty(
+                user[1], duty.date
+            ):
                 create_duty_assignment(user[1], duty)
                 update_priority(user_id=user[1])
                 count += 1
 
+        dt = duty.date.strftime("%Y-%m-%d")
+        messages[dt] = messages.get(dt, [])
         if count == 0:
-            print(f'На дату {duty.date} никто не назначен, а надо {people_for_day}')
+            messages[dt].append(
+                f"На дату {dt} никто не назначен, а надо {people_for_day}"
+            )
 
         elif count < people_for_day:
-            print(f'На дату {duty.date} назначено {count} дежурных вместо {people_for_day}')
+            messages[dt].append(
+                f"На дату {dt} назначено {count} дежурных вместо {people_for_day}"
+            )
+
+        return "Дежурные назначены", messages
 
 
 def get_days_off(user_id, date):
-    days_off = DaysOff.objects.filter(user_id=user_id, date=date)
+    days_off = DaysOff.objects.filter(user_id=user_id, date=date).exists()
     print("days_off", days_off)
-    return True if days_off else False
+    return days_off
 
 
 def create_duty_assignment(user_id, duty):
@@ -53,13 +65,14 @@ def update_priority(user_id):
 
 
 def user_has_previous_duty(user_id, date):
-    duties = Duty.objects.filter(date__lt = date).order_by("date")
+    duties = Duty.objects.filter(date__lt=date).order_by("date")
     if len(duties) == 0:
-        print("duties", False)
+        print("duties нет")
         return False
     prev_duty_id = duties.last().id
-    user_has_previous_duty = DutyAssignment.objects.filter(user_id=user_id, duty_id=prev_duty_id).exists()
-    print("user_has_previous_duty", user_has_previous_duty)
+    user_previous_duty = DutyAssignment.objects.filter(
+        user_id=user_id, duty_id=prev_duty_id
+    ).exists()
+    print("user_has_previous_duty", user_previous_duty)
     print("duties", duties)
-    return user_has_previous_duty
-
+    return user_previous_duty

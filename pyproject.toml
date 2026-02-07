@@ -12,6 +12,7 @@ dependencies = [
     "pytest-coverage>=0.0",
     "python-dotenv>=1.2.1",
     "ruff>=0.15.0",
+    "urllib3>=2.6.3",
 ]
 
 [dependency-groups]
