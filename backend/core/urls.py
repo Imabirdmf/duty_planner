@@ -17,13 +17,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
-from planner.views import CalendarView, DaysOffViewSet, DutyViewSet, StaffViewSet
+from planner.views import CalendarView, DaysOffViewSet, StaffViewSet, DutyAssignmentViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register("users", StaffViewSet)
 router.register("days-off", DaysOffViewSet)
-router.register("duties", DutyViewSet)
+router.register("duties", DutyAssignmentViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),

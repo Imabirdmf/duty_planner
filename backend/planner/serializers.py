@@ -30,15 +30,17 @@ class DaysOffSerializer(serializers.ModelSerializer):
         ]
 
 
-class DutySerializer(serializers.ModelSerializer):
-    date = serializers.DateField(validators=[validate_date_not_past])
-
-    class Meta:
-        model = Duty
-        fields = ("id", "date")
+# class DutySerializer(serializers.ModelSerializer):
+#     date = serializers.DateField(validators=[validate_date_not_past])
+#
+#     class Meta:
+#         model = Duty
+#         fields = ("id", "date")
 
 
 class DutyAssignmentSerializer(serializers.ModelSerializer):
+    month = serializers.CharField()
+    people_per_day = serializers.IntegerField(max_value=10)
 
     class Meta:
         model = DutyAssignment
@@ -59,7 +61,3 @@ class CalendarMonthQuerySerializer(serializers.Serializer):
 class CalendarResponseSerializer(serializers.Serializer):
     month = serializers.CharField()
     dates = serializers.ListField(child=serializers.DateField())
-
-
-# class CalendarDaysSerializer(serializers.Serializer):
-#     duty_days = serializers.ListField(child=serializers.DateField())

@@ -7,7 +7,7 @@ def create_plan(people_for_day=2):
     messages = {}
     duties = Duty.objects.all().order_by("date")
     staff = Staff.objects.all()
-    # если вынести за пределы цикла, надо как-то обновлять данные по приоритету внутри?
+
     for duty in duties:
         users = [(user.priority, user.id) for user in staff]
         heapq.heapify(users)
@@ -57,9 +57,9 @@ def create_duty_assignment(user_id, duty):
     print("duty_assignment created")
 
 
-def update_priority(user_id):
+def update_priority(user_id, value=1):
     user = Staff.objects.get(id=user_id)
-    user.priority += 1
+    user.priority += value
     user.save()
     print("user.priority", user.priority)
 

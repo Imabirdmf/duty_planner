@@ -1,6 +1,9 @@
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import action
+from .services.planner import create_plan
+
 
 from .models import DaysOff, Duty, DutyAssignment, Staff
 from .serializers import (
@@ -8,11 +11,11 @@ from .serializers import (
     CalendarResponseSerializer,
     DaysOffSerializer,
     DutyAssignmentSerializer,
-    DutySerializer,
+    # DutySerializer,
     StaffSerializer,
 )
-from .services import calendar
-from .services.calendar import save_duty_days
+
+from .services.duty_calendar import save_duty_days, get_duty_days
 
 
 class StaffViewSet(viewsets.ModelViewSet):
@@ -25,14 +28,29 @@ class DaysOffViewSet(viewsets.ModelViewSet):
     serializer_class = DaysOffSerializer
 
 
-class DutyViewSet(viewsets.ModelViewSet):
-    queryset = Duty.objects.all()
-    serializer_class = DutySerializer
+# class DutyViewSet(viewsets.ModelViewSet):
+#     queryset = Duty.objects.all()
+#     serializer_class = DutySerializer
 
 
 class DutyAssignmentViewSet(viewsets.ModelViewSet):
     queryset = DutyAssignment.objects.all()
     serializer_class = DutyAssignmentSerializer
+
+    @action(detail=False, methods=['post'])
+    def generate(self, request):
+        parameters = request.data
+        parameters_serializer = DutyAssignmentSerializer(parameters)
+        parameters_serializer.is_valid()
+        people_per_day = parameters_serializer.validated_data('people_per_day')
+        message, errors = create_plan(people_per_day)
+
+        return Response
+
+    @action(detail=True, methods=['post'])
+    def assignment(self, request):
+        pass
+
 
 
 class CalendarView(APIView):
@@ -42,7 +60,7 @@ class CalendarView(APIView):
         serializer.is_valid(raise_exception=True)
         month_start = serializer.validated_data["month"]
 
-        duty_dates = calendar.get_duty_days(month_start)
+        duty_dates = get_duty_days(month_start)
         dates = [d.date for d in duty_dates]
         data = {"month": month_start, "dates": dates}
 
