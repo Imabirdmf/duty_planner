@@ -4,7 +4,7 @@ from planner.validators import validate_date_not_past
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from .models import DaysOff, Duty, DutyAssignment, Staff
+from .models import DaysOff, DutyAssignment, Staff
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -45,6 +45,12 @@ class DutyAssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = DutyAssignment
         fields = ("id", "date", "user")
+
+
+class DutyAssignmentChangeSerializer(serializers.Serializer):
+    user_id_prev = serializers.IntegerField()
+    user_id_new = serializers.IntegerField()
+    date = serializers.DateField()
 
 
 class CalendarMonthQuerySerializer(serializers.Serializer):

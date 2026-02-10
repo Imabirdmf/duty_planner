@@ -17,7 +17,12 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
-from planner.views import CalendarView, DaysOffViewSet, StaffViewSet, DutyAssignmentViewSet
+from planner.views import (
+    CalendarView,
+    DaysOffViewSet,
+    DutyAssignmentViewSet,
+    StaffViewSet,
+)
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()

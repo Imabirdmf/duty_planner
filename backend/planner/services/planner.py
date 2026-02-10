@@ -1,5 +1,6 @@
 import heapq
 
+from django.db.models import F
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
 
 
@@ -58,10 +59,7 @@ def create_duty_assignment(user_id, duty):
 
 
 def update_priority(user_id, value=1):
-    user = Staff.objects.get(id=user_id)
-    user.priority += value
-    user.save()
-    print("user.priority", user.priority)
+    Staff.objects.filter(id=user_id).update(priority=F("priority") + value)
 
 
 def user_has_previous_duty(user_id, date):

@@ -1,21 +1,21 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.decorators import action
-from .services.planner import create_plan
 
-
-from .models import DaysOff, Duty, DutyAssignment, Staff
+from .models import DaysOff, DutyAssignment, Staff
 from .serializers import (
     CalendarMonthQuerySerializer,
     CalendarResponseSerializer,
     DaysOffSerializer,
+    DutyAssignmentChangeSerializer,
     DutyAssignmentSerializer,
     # DutySerializer,
     StaffSerializer,
 )
-
-from .services.duty_calendar import save_duty_days, get_duty_days
+from .services.assignments import make_assignment
+from .services.duty_calendar import get_duty_days, save_duty_days
+from .services.planner import create_plan
 
 
 class StaffViewSet(viewsets.ModelViewSet):
@@ -37,20 +37,31 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
     queryset = DutyAssignment.objects.all()
     serializer_class = DutyAssignmentSerializer
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def generate(self, request):
-        parameters = request.data
-        parameters_serializer = DutyAssignmentSerializer(parameters)
-        parameters_serializer.is_valid()
-        people_per_day = parameters_serializer.validated_data('people_per_day')
+        parameters_serializer = DutyAssignmentSerializer(request.data)
+        parameters_serializer.is_valid(raise_exception=True)
+        people_per_day = parameters_serializer.validated_data["people_per_day"]
         message, errors = create_plan(people_per_day)
+        data = {"message": message, "errors": errors}
 
-        return Response
+        return Response(data)
 
-    @action(detail=True, methods=['post'])
-    def assignment(self, request):
-        pass
-
+    @action(detail=False, methods=["post"])
+    def assign(self, request):
+        duty_assignment = DutyAssignmentChangeSerializer(request.data)
+        duty_assignment.is_valid(raise_exception=True)
+        prev_user = duty_assignment.validated_data["prev_user"]
+        new_user = duty_assignment.validated_data["new_user"]
+        date = duty_assignment.validated_data["date"]
+        try:
+            make_assignment(prev_user=prev_user, new_user=new_user, duty_date=date)
+        except Exception as e:
+            return Response(
+                {"error": "Не удалось переназначить: " + str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({"status": "updated"}, status=status.HTTP_200_OK)
 
 
 class CalendarView(APIView):
@@ -74,7 +85,7 @@ class CalendarView(APIView):
 
         request_days = request.data
         payload_serializer = CalendarResponseSerializer(data=request_days)
-        payload_serializer.is_valid()
+        payload_serializer.is_valid(raise_exception=True)
         request_days_serialized = payload_serializer.validated_data["dates"]
         dates = save_duty_days(month_start, request_days_serialized)
 
