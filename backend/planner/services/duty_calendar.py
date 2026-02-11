@@ -3,21 +3,17 @@ import calendar
 from planner.models import Duty
 
 
-def get_duty_days(month_start):
-    month_end = month_start.replace(
-        day=calendar.monthrange(month_start.year, month_start.month)[1]
-    )
-
-    data = Duty.objects.filter(date__gte=month_start, date__lte=month_end)
-
+def get_duty_days(date_start, date_end):
+    data = Duty.objects.filter(date__gte=date_start, date__lte=date_end).order_by('date')
     return data
 
 
-def save_duty_days(month_start, dates):
+def save_duty_days(dates):
+    dates_sorted = sorted(dates)
     Duty.objects.bulk_update_or_create(
-        [Duty(date=duty_date) for duty_date in dates],
+        [Duty(date=duty_date) for duty_date in dates_sorted],
         update_fields=["date"],
         match_field=["date"],
     )
-    data = get_duty_days(month_start)
+    data = get_duty_days(date_start=dates_sorted[0], date_end=dates_sorted[-1])
     return data

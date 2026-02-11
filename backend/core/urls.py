@@ -18,7 +18,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from planner.views import (
-    CalendarView,
     DaysOffViewSet,
     DutyAssignmentViewSet,
     StaffViewSet,
@@ -33,5 +32,5 @@ router.register("duties", DutyAssignmentViewSet)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
-    path("calendar/", CalendarView.as_view()),
+    # path("api/calendar/", CalendarView.as_view()),
 ]

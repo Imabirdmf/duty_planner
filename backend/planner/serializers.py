@@ -29,22 +29,16 @@ class DaysOffSerializer(serializers.ModelSerializer):
             )
         ]
 
-
-# class DutySerializer(serializers.ModelSerializer):
-#     date = serializers.DateField(validators=[validate_date_not_past])
-#
-#     class Meta:
-#         model = Duty
-#         fields = ("id", "date")
-
-
 class DutyAssignmentSerializer(serializers.ModelSerializer):
-    month = serializers.CharField()
-    people_per_day = serializers.IntegerField(max_value=10)
 
     class Meta:
         model = DutyAssignment
         fields = ("id", "date", "user")
+
+
+class DutyAssignmentGenerateSerializer(serializers.Serializer):
+    dates = serializers.ListField(child=serializers.DateField())
+    people_per_day = serializers.IntegerField(max_value=10)
 
 
 class DutyAssignmentChangeSerializer(serializers.Serializer):
@@ -52,18 +46,29 @@ class DutyAssignmentChangeSerializer(serializers.Serializer):
     user_id_new = serializers.IntegerField()
     date = serializers.DateField()
 
-
-class CalendarMonthQuerySerializer(serializers.Serializer):
-    month = serializers.CharField()
-
-    def validate(self, attrs):
-        value = attrs["month"]
-        year_str, month_str = value.split("-")
-        attrs["month"] = date(int(year_str), int(month_str), 1)
-
-        return attrs
+class DutyAssignmentResponseSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    users = StaffSerializer(many=True)
 
 
-class CalendarResponseSerializer(serializers.Serializer):
-    month = serializers.CharField()
-    dates = serializers.ListField(child=serializers.DateField())
+# class CalendarMonthQuerySerializer(serializers.Serializer):
+#     month = serializers.CharField()
+#
+#     def validate(self, attrs):
+#         value = attrs["month"]
+#         year_str, month_str = value.split("-")
+#         attrs["month"] = date(int(year_str), int(month_str), 1)
+#
+#         return attrs
+#
+#
+# class CalendarResponseSerializer(serializers.Serializer):
+#     month = serializers.CharField()
+#     dates = serializers.ListField(child=serializers.DateField())
+
+# class DutySerializer(serializers.ModelSerializer):
+#     date = serializers.DateField(validators=[validate_date_not_past])
+#
+#     class Meta:
+#         model = Duty
+#         fields = ("id", "date")

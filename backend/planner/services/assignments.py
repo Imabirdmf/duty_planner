@@ -6,14 +6,12 @@ from planner.models import DutyAssignment
 from .planner import update_priority
 
 
-def get_assignments(month_start):
-    month_end = month_start.replace(
-        day=calendar.monthrange(month_start.year, month_start.month)[1]
-    )
-    print(month_end)
+def get_assignments(date_start, date_end=None):
+    if date_end is None:
+        date_end = date_start
     duty_assignments = DutyAssignment.objects.filter(
-        duty__date__gte=month_start, duty__date__lte=month_end
-    ).select_related("user")
+        duty__date__gte=date_start, duty__date__lte=date_end
+    ).order_by('duty__date').select_related("user")
 
     return duty_assignments
 
@@ -27,3 +25,19 @@ def make_assignment(prev_user, duty_date, new_user=None):
             update_priority(new_user, 1)
         new_assignment = get_assignments(duty_date).filter(user__id=new_user).get()
         return new_assignment
+
+
+def assignments_response(duty_assignments):
+    sp = list(duty_assignments)
+    result = []
+    last = None
+    for el in sp:
+        if last is None:
+            last = {'date': el.duty.date, 'users': [el.user]}
+        elif last['date'] == el.duty.date:
+            last['users'].append(el.user)
+        else:
+            result.append(last)
+            last = {'date': el.duty.date, 'users': [el.user]}
+    result.append(last)
+    return result
