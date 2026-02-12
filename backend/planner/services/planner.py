@@ -80,8 +80,11 @@ def create_duty_assignment(user_id, duty):
     print("duty_assignment created")
 
 
-def update_priority(user_id, value):
-    Staff.objects.filter(id=user_id).update(priority=value)
+def update_priority(user_id, value, diff=None):
+    if value:
+        Staff.objects.filter(id=user_id).update(priority=value)
+    elif diff:
+        Staff.objects.filter(id=user_id).update(priority=F('priority')+diff)
 
 
 def user_has_previous_duty(user_id, date):
