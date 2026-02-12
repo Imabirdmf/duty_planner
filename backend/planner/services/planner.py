@@ -10,17 +10,20 @@ def create_plan(date_start, date_end, people_for_day=2):
     messages = {}
     print('Иду за дьюти дейс')
     duties = get_duty_days(date_start, date_end).order_by("date")
+    duty_assignments = DutyAssignment.objects.filter(duty__date__gte=date_start, duty__date__lte=date_end)
     print(duties)
+    print(duty_assignments)
     print('Иду за пользователями')
     staff = Staff.objects.all()
-
+    users = [(user.priority, user.id) for user in staff]
+    shuffle(users)
+    heapq.heapify(users)
     for duty in duties:
-        users = [(user.priority, user.id) for user in staff]
-        shuffle(users)
-        heapq.heapify(users)
+
+        count = duty_assignments.filter(duty__id=duty.id).count()
         print("очередь", users)
-        count = 0
         print("duty", duty)
+        added_users = []
         while count < people_for_day:
             if len(users) == 0:
                 break
@@ -31,9 +34,17 @@ def create_plan(date_start, date_end, people_for_day=2):
                 user[1], duty.date
             ):
                 create_duty_assignment(user[1], duty)
-                update_priority(user_id=user[1])
                 count += 1
+                added_users.append((user[0]+1, user[1]))
+            else:
+                added_users.append(user)
             print(f'finish for {duty}')
+
+        if len(added_users) != 0:
+            for u in added_users:
+                heapq.heappush(users, (u[0], u[1]))
+            print('Очередь после возвращения', users)
+
 
         dt = duty.date.strftime("%Y-%m-%d")
         messages[dt] = messages.get(dt, [])
@@ -46,6 +57,10 @@ def create_plan(date_start, date_end, people_for_day=2):
             messages[dt].append(
                 f"На дату {dt} назначено {count} дежурных вместо {people_for_day}"
             )
+
+    for u in users:
+        update_priority(u[1], u[0])
+
 
     return messages
 
@@ -65,8 +80,8 @@ def create_duty_assignment(user_id, duty):
     print("duty_assignment created")
 
 
-def update_priority(user_id, value=1):
-    Staff.objects.filter(id=user_id).update(priority=F("priority") + value)
+def update_priority(user_id, value):
+    Staff.objects.filter(id=user_id).update(priority=value)
 
 
 def user_has_previous_duty(user_id, date):

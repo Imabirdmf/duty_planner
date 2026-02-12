@@ -6,11 +6,11 @@ from planner.services.duty_calendar import get_duty_days
 from planner.services.planner import create_plan
 
 
-# class Command(BaseCommand):
-#     help = "Generate duty plan"
-#
-#     def handle(self, *args, **options):
-#         print(create_plan(date(2026, 2, day=1)))
+class Command(BaseCommand):
+    help = "Generate duty plan"
+
+    def handle(self, *args, **options):
+        print(create_plan(date(2026, 2, day=1), date(2026, 2, day=5)))
 
 
 # class Command(BaseCommand):
