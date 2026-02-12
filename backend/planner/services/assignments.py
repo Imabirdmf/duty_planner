@@ -11,7 +11,7 @@ def get_assignments(date_start, date_end=None):
         date_end = date_start
     duty_assignments = DutyAssignment.objects.filter(
         duty__date__gte=date_start, duty__date__lte=date_end
-    ).order_by('duty__date').select_related("user")
+    ).order_by('duty__date').select_related("user", "duty")
 
     return duty_assignments
 

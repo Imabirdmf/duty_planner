@@ -33,7 +33,7 @@ class DutyAssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DutyAssignment
-        fields = ("id", "date", "user")
+        fields = ("id", "duty", "user")
 
 
 class DutyAssignmentGenerateSerializer(serializers.Serializer):

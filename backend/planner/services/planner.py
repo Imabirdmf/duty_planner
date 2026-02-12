@@ -3,17 +3,20 @@ import heapq
 from django.db.models import F
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
 from .duty_calendar import get_duty_days
+from random import shuffle
 
 
 def create_plan(date_start, date_end, people_for_day=2):
     messages = {}
     print('Иду за дьюти дейс')
     duties = get_duty_days(date_start, date_end).order_by("date")
+    print(duties)
     print('Иду за пользователями')
     staff = Staff.objects.all()
 
     for duty in duties:
         users = [(user.priority, user.id) for user in staff]
+        shuffle(users)
         heapq.heapify(users)
         print("очередь", users)
         count = 0
@@ -30,6 +33,7 @@ def create_plan(date_start, date_end, people_for_day=2):
                 create_duty_assignment(user[1], duty)
                 update_priority(user_id=user[1])
                 count += 1
+            print(f'finish for {duty}')
 
         dt = duty.date.strftime("%Y-%m-%d")
         messages[dt] = messages.get(dt, [])
@@ -43,7 +47,7 @@ def create_plan(date_start, date_end, people_for_day=2):
                 f"На дату {dt} назначено {count} дежурных вместо {people_for_day}"
             )
 
-        return messages
+    return messages
 
 
 def get_days_off(user_id, date):

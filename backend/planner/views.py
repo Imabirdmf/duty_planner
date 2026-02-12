@@ -68,7 +68,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         date = duty_assignment.validated_data["date"]
         try:
             data = make_assignment(prev_user=prev_user, new_user=new_user, duty_date=date)
-            serialized_data = DutyAssignmentResponseSerializer(data,)
+            serialized_data = DutyAssignmentResponseSerializer(data).data
             return Response(serialized_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(
