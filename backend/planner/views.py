@@ -32,7 +32,10 @@ class DaysOffViewSet(viewsets.ModelViewSet):
         query_params = self.request.query_params
         start_date = query_params.get('start_date', None)
         end_date = query_params.get('end_date', None)
-        qs = get_list_or_404(DaysOff, date__gte=start_date, date__lte=end_date)
+        if start_date and end_date:
+            qs = get_list_or_404(DaysOff, date__gte=start_date, date__lte=end_date)
+        else:
+            qs = DaysOff.objects.all()
         return qs
 
 

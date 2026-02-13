@@ -32,5 +32,4 @@ router.register("duties", DutyAssignmentViewSet)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
-    # path("api/calendar/", CalendarView.as_view()),
 ]
