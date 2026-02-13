@@ -35,7 +35,7 @@ class DutyAssignmentSerializer(serializers.ModelSerializer):
         fields = ("id", "duty", "user")
 
 
-class DutyAssignmentQuerySerializer(serializers.Serializer):
+class DatesQuerySerializer(serializers.Serializer):
     start_date = serializers.DateField(required=True)
     end_date = serializers.DateField(required=True)
 
@@ -63,25 +63,3 @@ class DutyWithAssignmentsSerializer(serializers.ModelSerializer):
         users = [a.user for a in assignments]
         return StaffSerializer(users, many=True).data
 
-
-# class CalendarMonthQuerySerializer(serializers.Serializer):
-#     month = serializers.CharField()
-#
-#     def validate(self, attrs):
-#         value = attrs["month"]
-#         year_str, month_str = value.split("-")
-#         attrs["month"] = date(int(year_str), int(month_str), 1)
-#
-#         return attrs
-#
-#
-# class CalendarResponseSerializer(serializers.Serializer):
-#     month = serializers.CharField()
-#     dates = serializers.ListField(child=serializers.DateField())
-
-# class DutySerializer(serializers.ModelSerializer):
-#     date = serializers.DateField(validators=[validate_date_not_past])
-#
-#     class Meta:
-#         model = Duty
-#         fields = ("id", "date")

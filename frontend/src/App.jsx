@@ -54,9 +54,13 @@ const App = () => {
   };
 
   const shiftMonth = (current, offset) => {
-    const [y, m] = current.split('-').map(Number);
-    const d = new Date(y, m - 1 + offset, 1);
-    return d.toISOString().slice(0, 7);
+    const [year, month] = current.split('-').map(Number);
+    const date = new Date(year, month - 1 + offset, 1);
+
+    const newYear = date.getFullYear();
+    const newMonth = String(date.getMonth() + 1).padStart(2, '0');
+
+    return `${newYear}-${newMonth}`;
   };
 
   // --- API запросы ---
@@ -72,7 +76,17 @@ const App = () => {
     try {
       const res = await api.get('/api/days-off/', { params: { start_date: startDate, end_date: endDate } });
       setVacations(res.data);
-    } catch { setError("Ошибка загрузки выходных"); }
+    } catch (err) {
+        if (err.response) {
+            switch (err.response.status) {
+                case 404:
+                    setVacations([]);
+                    break;
+                default:
+                    setError("Ошибка загрузки выходных");
+            }
+        }
+    }
   };
 
   const fetchTimetable = async () => {

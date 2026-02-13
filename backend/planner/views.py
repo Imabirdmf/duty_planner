@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.shortcuts import get_list_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -8,10 +9,9 @@ from .serializers import (
     DaysOffSerializer,
     DutyAssignmentChangeSerializer,
     DutyAssignmentGenerateSerializer,
-    DutyAssignmentQuerySerializer,
+    DatesQuerySerializer,
     DutyAssignmentSerializer,
     DutyWithAssignmentsSerializer,
-    # DutySerializer,
     StaffSerializer,
 )
 from .services.assignments import get_assignments, make_assignment
@@ -28,10 +28,12 @@ class DaysOffViewSet(viewsets.ModelViewSet):
     queryset = DaysOff.objects.all()
     serializer_class = DaysOffSerializer
 
-
-# class DutyViewSet(viewsets.ModelViewSet):
-#     queryset = Duty.objects.all()
-#     serializer_class = DutySerializer
+    def get_queryset(self):
+        query_params = self.request.query_params
+        start_date = query_params.get('start_date', None)
+        end_date = query_params.get('end_date', None)
+        qs = get_list_or_404(DaysOff, date__gte=start_date, date__lte=end_date)
+        return qs
 
 
 class DutyAssignmentViewSet(viewsets.ModelViewSet):
@@ -40,7 +42,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def list_assignments(self, request):
-        query_serializer = DutyAssignmentQuerySerializer(data=request.query_params)
+        query_serializer = DatesQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
 
         start_date = query_serializer.validated_data["start_date"]
@@ -80,7 +82,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         duty_assignment_serializer = DutyAssignmentChangeSerializer(data=request.data)
         duty_assignment_serializer.is_valid(raise_exception=True)
 
-        query_serializer = DutyAssignmentQuerySerializer(data=request.query_params)
+        query_serializer = DatesQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
 
         prev_user = duty_assignment_serializer.validated_data["user_id_prev"]
@@ -102,33 +104,3 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-
-# class CalendarView(APIView):
-#
-#     def get(self, request):
-#         serializer = CalendarMonthQuerySerializer(data=request.query_params)
-#         serializer.is_valid(raise_exception=True)
-#         month_start = serializer.validated_data["month"]
-#
-#         duty_dates = get_duty_days(month_start)
-#         dates = [d.date for d in duty_dates]
-#         data = {"month": month_start, "dates": dates}
-#
-#         response_serializer = CalendarResponseSerializer(data)
-#         return Response(response_serializer.data, status=status.HTTP_200_OK)
-#
-#     def post(self, request):
-#         serializer = CalendarMonthQuerySerializer(data=request.query_params)
-#         serializer.is_valid(raise_exception=True)
-#         month_start = serializer.validated_data["month"]
-#
-#         request_days = request.data
-#         payload_serializer = CalendarResponseSerializer(data=request_days)
-#         payload_serializer.is_valid(raise_exception=True)
-#         request_days_serialized = payload_serializer.validated_data["dates"]
-#         dates = save_duty_days(month_start, request_days_serialized)
-#
-#         data = {"month": month_start, "dates": [duty.date for duty in dates]}
-#         response_serializer = CalendarResponseSerializer(data)
-#
-#         return Response(response_serializer.data, status=status.HTTP_200_OK)
