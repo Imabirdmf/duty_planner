@@ -1,329 +1,385 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   Calendar, Users, Play, X, Info, ClipboardList,
-  Plus, AlertCircle, Save, ChevronRight, UserMinus, Trash2
+  Plus, AlertCircle, UserPlus, RotateCcw, ChevronLeft, ChevronRight,
+  CalendarDays
 } from 'lucide-react';
 
-// Настройка API клиента
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
   timeout: 5000,
 });
 
 const App = () => {
-  // --- Состояния приложения ---
+  // Состояние для генерации графика (Блок Параметры)
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
+  // Состояние для управления выходными (Блок Сотрудники)
+  const [vacationMonth, setVacationMonth] = useState(new Date().toISOString().slice(0, 7));
+
   const [shiftSize, setShiftSize] = useState(2);
   const [users, setUsers] = useState([]);
   const [vacations, setVacations] = useState([]);
   const [selectedDutyDays, setSelectedDutyDays] = useState([]);
-  const [timetable, setTimetable] = useState(null);
-
-  // Состояния интерфейса
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [timetable, setTimetable] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   const [isDistributing, setIsDistributing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Состояние для выпадающего календаря добавления выходного (popover)
-  const [activePopover, setActivePopover] = useState(null);
+  // Поповеры
+  const [activeVacationPopover, setActiveVacationPopover] = useState(null);
+  const [activeEditPopover, setActiveEditPopover] = useState(null);
+  const [activeAddUserPopover, setActiveAddUserPopover] = useState(null);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
-  // --- Эффекты ---
-
-  // Таймер для автоматического скрытия ошибок (5 секунд)
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
+  const vacationRef = useRef(null);
+  const editRef = useRef(null);
+  const addUserRef = useRef(null);
+  const monthPickerRef = useRef(null);
 
   // --- Вспомогательные функции ---
+  const getMonthRange = (monthStr) => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const startDate = `${monthStr}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${monthStr}-${lastDay.toString().padStart(2, '0')}`;
+    return { startDate, endDate };
+  };
 
-  // Обновленный трансформер под структуру { data: [...], errors: {...} }
-  const transformDuties = (response) => {
-    const items = response.data;
-    if (!items || !Array.isArray(items)) return null;
+  const getDaysInMonth = (monthStr) => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const days = new Date(year, month, 0).getDate();
+    return Array.from({ length: days }, (_, i) => `${monthStr}-${(i + 1).toString().padStart(2, '0')}`);
+  };
 
-    return items.reduce((acc, item) => {
-      acc[item.date] = item.users.map(u => ({
-        id: u.id,
-        name: u.full_name // Для карточек результата оставляем full_name как более информативное
-      }));
-      return acc;
-    }, {});
+  const shiftMonth = (current, offset) => {
+    const [y, m] = current.split('-').map(Number);
+    const d = new Date(y, m - 1 + offset, 1);
+    return d.toISOString().slice(0, 7);
   };
 
   // --- API запросы ---
-
-  const fetchInitialData = async () => {
-    setIsLoadingUsers(true);
-    setError(null);
+  const fetchUsers = async () => {
     try {
-      const [usersRes, vacationsRes] = await Promise.all([
-        api.get('/api/users/'),
-        api.get('/api/days-off/')
-      ]);
-      setUsers(usersRes.data);
-      setVacations(vacationsRes.data);
-    } catch (err) {
-      console.error(err);
-      setError("Ошибка связи с сервером. Убедитесь, что Django запущен на порту 8000.");
-    } finally {
-      setIsLoadingUsers(false);
-    }
+      const res = await api.get('/api/users/');
+      setUsers(res.data);
+    } catch { setError("Ошибка загрузки пользователей"); }
+  };
+
+  const fetchVacations = async () => {
+    const { startDate, endDate } = getMonthRange(vacationMonth);
+    try {
+      const res = await api.get('/api/days-off/', { params: { start_date: startDate, end_date: endDate } });
+      setVacations(res.data);
+    } catch { setError("Ошибка загрузки выходных"); }
+  };
+
+  const fetchTimetable = async () => {
+    const { startDate, endDate } = getMonthRange(currentMonth);
+    try {
+      const res = await api.get('/api/duties/list_assignments/', { params: { start_date: startDate, end_date: endDate } });
+      const items = res.data?.data || res.data;
+      if (Array.isArray(items)) {
+        const mapped = items.reduce((acc, item) => {
+          acc[item.date] = item.users.map(u => ({ id: u.id, name: u.full_name || u.name }));
+          return acc;
+        }, {});
+        setTimetable(mapped);
+      }
+    } catch { setTimetable({}); }
   };
 
   useEffect(() => {
-    fetchInitialData();
+    fetchUsers();
   }, []);
 
-  const handleAddVacation = async (userId, date) => {
-    if (!date || !userId) return;
-    setError(null);
+  useEffect(() => {
+    fetchVacations();
+  }, [vacationMonth]);
 
+  useEffect(() => {
+    fetchTimetable();
+    setSelectedDutyDays([]);
+  }, [currentMonth]);
+
+  const handleAssignmentChange = async (date, oldId, newId) => {
+    const { startDate, endDate } = getMonthRange(currentMonth);
+    setActiveEditPopover(null);
+    setActiveAddUserPopover(null);
     try {
-      const res = await api.post('/api/days-off/', {
-        user: userId,
-        date: date
-      });
-      setVacations(prev => [...prev, res.data]);
-      setActivePopover(null);
-    } catch (err) {
-      console.error(err);
-      if (err.response && err.response.data) {
-        const data = err.response.data;
-        let errorMessage = "Не удалось добавить выходной день.";
-        if (data.non_field_errors) {
-          errorMessage = data.non_field_errors.join(", ");
-        } else if (data.date) {
-          errorMessage = Array.isArray(data.date) ? data.date.join(", ") : data.date;
-        } else if (data.detail) {
-          errorMessage = data.detail;
-        }
-        setError(errorMessage);
-      } else {
-        setError("Сетевая ошибка при попытке добавить выходной.");
-      }
-    }
+      await api.post(`/api/duties/assign/`,
+        { user_id_prev: oldId, user_id_new: newId, date },
+        { params: { start_date: startDate, end_date: endDate } }
+      );
+      await fetchTimetable();
+    } catch { setError("Ошибка обновления смены"); }
   };
+
+const handleAddVacation = async (userId, date) => {
+  setError(null);
+  try {
+    await api.post('/api/days-off/', { user: userId, date });
+    await fetchVacations();
+    setActiveVacationPopover(null);
+  } catch (err) {
+    if (err.response && err.response.data) {
+      const data = err.response.data;
+      if (data.non_field_errors) {
+        setError(data.non_field_errors[0]);
+      } else if (data.date) {
+        setError(`Ошибка даты: ${data.date[0]}`);
+      } else {
+        setError("Не удалось добавить выходной.");
+      }
+    } else {
+      setError("Ошибка связи с сервером.");
+    }
+
+    // Автоматически скрыть через 5 секунд
+    setTimeout(() => setError(null), 5000);
+  }
+};
 
   const handleDeleteVacation = async (id) => {
     try {
       await api.delete(`/api/days-off/${id}/`);
-      setVacations(prev => prev.filter(v => v.id !== id));
-    } catch (err) {
-      setError("Ошибка при удалении записи.");
-    }
+      await fetchVacations();
+    } catch { setError("Ошибка удаления"); }
   };
 
-  const handleGenerate = async () => {
-    setIsDistributing(true);
-    setError(null);
-    try {
-      const res = await api.post('/api/duties/generate/', {
-        month: currentMonth,
-        people_per_day: parseInt(shiftSize),
-        dates: selectedDutyDays
-      });
-      setTimetable(transformDuties(res.data));
-    } catch (err) {
-      console.error(err);
-      setError("Ошибка алгоритма генерации. Проверьте параметры и доступность сотрудников.");
-    } finally {
-      setIsDistributing(false);
-    }
-  };
+  useEffect(() => {
+    const clickOut = (e) => {
+      if (vacationRef.current && !vacationRef.current.contains(e.target)) setActiveVacationPopover(null);
+      if (editRef.current && !editRef.current.contains(e.target)) setActiveEditPopover(null);
+      if (addUserRef.current && !addUserRef.current.contains(e.target)) setActiveAddUserPopover(null);
+      if (monthPickerRef.current && !monthPickerRef.current.contains(e.target)) setIsMonthPickerOpen(false);
+    };
+    document.addEventListener('mousedown', clickOut);
+    return () => document.removeEventListener('mousedown', clickOut);
+  }, []);
 
-  const toggleDaySelection = (dateStr) => {
-    setSelectedDutyDays(prev =>
-      prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr]
-    );
-  };
+  const displayDates = Array.from(new Set([...Object.keys(timetable), ...selectedDutyDays])).sort();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans p-4 md:p-8">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl flex items-center justify-between animate-in fade-in zoom-in slide-in-from-top-4 sticky top-4 z-50 shadow-lg transition-all duration-300">
-            <div className="flex items-center gap-2 font-medium">
-              <AlertCircle size={18} />
-              {error}
+            <div className="sticky top-0 left-0 right-0 z-[300] bg-red-50 border-b-2 border-red-200 text-red-700 p-4 rounded-2xl shadow-lg flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center gap-3 flex-1">
+                    <AlertCircle size={20} className="flex-shrink-0" />
+                    <span className="font-bold text-sm">{error}</span>
+                </div>
+                <button
+                    onClick={() => setError(null)}
+                    className="p-1.5 hover:bg-red-100 rounded-lg transition-colors flex-shrink-0"
+                >
+                    <X size={16} />
+                </button>
             </div>
-            <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded-lg transition-colors">
-              <X size={18} />
-            </button>
-          </div>
         )}
 
-        <header className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100 gap-4">
-          <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Duty<span className="text-blue-600">Planner</span></h1>
-            <p className="text-slate-400 text-sm font-medium">Управление расписанием через API</p>
+        <header className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <h1 className="text-2xl font-black text-slate-800">Duty<span className="text-blue-600">Planner</span></h1>
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+            Control Panel v2.1
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
           <div className="lg:col-span-8 space-y-6">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-5 border-b border-slate-50 flex items-center gap-2 font-bold text-slate-700">
-                <Users size={18} className="text-blue-600" />
-                Команда и доступность
+
+            {/* Блок Сотрудники */}
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-visible">
+              <div className="p-5 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 font-bold text-slate-700">
+                  <Users size={18} className="text-blue-600" /> Состав и выходные
+                </div>
+
+                {/* Период для выходных */}
+                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit">
+                  <button onClick={() => setVacationMonth(m => shiftMonth(m, -1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all"><ChevronLeft size={16}/></button>
+                  <div className="w-[140px] text-center text-[11px] font-black uppercase text-slate-600 tracking-tight">
+                    {new Date(vacationMonth).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+                  </div>
+                  <button onClick={() => setVacationMonth(m => shiftMonth(m, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all"><ChevronRight size={16}/></button>
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50/50">
+
+              <div className="overflow-visible px-2 pb-2">
+                <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
+                  <thead>
                     <tr className="text-[10px] uppercase font-black text-slate-400">
-                      <th className="px-6 py-4 w-1/3">Сотрудник</th>
-                      <th className="px-6 py-4">Выходные / Отпуска</th>
+                      <th className="px-6 py-3 w-1/3">Сотрудник</th>
+                      <th className="px-6 py-3 w-2/3">Выходные за период</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {isLoadingUsers ? (
-                      [1,2,3].map(i => (
-                        <tr key={i} className="animate-pulse">
-                          <td className="px-6 py-4"><div className="h-4 bg-slate-100 rounded w-24"></div></td>
-                          <td className="px-6 py-4"><div className="h-4 bg-slate-100 rounded w-full"></div></td>
-                        </tr>
-                      ))
-                    ) : (
-                      users.map(u => (
-                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            {/* Возвращено использование u.name */}
-                            <div className="font-bold text-slate-800">{u.full_name}</div>
-                            <div className="text-[11px] text-slate-400">{u.email}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-wrap gap-2 items-center relative">
-                              {vacations
-                                .filter(v => v.user === u.id)
-                                .map(v => (
-                                  <div key={v.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-xl text-[10px] font-bold text-blue-600 shadow-sm group animate-in fade-in scale-in">
-                                    {v.date}
-                                    <button
-                                      onClick={() => handleDeleteVacation(v.id)}
-                                      className="hover:text-red-500 transition-colors ml-1"
-                                    >
-                                      <X size={12} strokeWidth={3} />
-                                    </button>
-                                  </div>
-                                ))}
-
-                              <div className="relative">
-                                <button
-                                  onClick={() => setActivePopover(activePopover === u.id ? null : u.id)}
-                                  className={`p-1.5 border rounded-xl transition-all ${activePopover === u.id ? 'bg-blue-600 border-blue-600 text-white' : 'border-dashed border-slate-200 text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50'}`}
-                                >
-                                  {activePopover === u.id ? <X size={14} /> : <Plus size={14} />}
-                                </button>
-
-                                {activePopover === u.id && (
-                                  <div className="absolute left-0 top-full mt-2 z-20 bg-white border border-slate-100 shadow-xl rounded-2xl p-3 animate-in fade-in slide-in-from-top-1 w-48">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Выбрать дату:</label>
-                                    <input
-                                      type="date"
-                                      autoFocus
-                                      className="w-full text-xs font-bold p-2 bg-slate-50 border-0 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                                      onChange={(e) => handleAddVacation(u.id, e.target.value)}
-                                    />
-                                  </div>
-                                )}
+                  <tbody>
+                    {users.map(u => (
+                      <tr key={u.id} className="group">
+                        <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors">
+                          <div className="font-bold text-slate-800 text-sm truncate">{u.full_name || u.name}</div>
+                        </td>
+                        <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors overflow-visible">
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {vacations.filter(v => v.user === u.id).map(v => (
+                              <div key={v.id} className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm">
+                                {new Date(v.date).getDate()} {new Date(v.date).toLocaleDateString('ru-RU', {month:'short'})}
+                                <button onClick={() => handleDeleteVacation(v.id)} className="text-slate-300 hover:text-red-500"><X size={10}/></button>
                               </div>
+                            ))}
+                            <div className="relative" ref={activeVacationPopover === u.id ? vacationRef : null}>
+                              <button onClick={() => setActiveVacationPopover(activeVacationPopover === u.id ? null : u.id)} className={`p-1.5 border rounded-lg transition-all ${activeVacationPopover === u.id ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'border-dashed border-slate-200 text-slate-400 hover:border-blue-300'}`}><Plus size={14}/></button>
+                              {activeVacationPopover === u.id && (
+                                <div className="absolute right-0 top-full mt-2 z-[100] bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-64 animate-in zoom-in-95">
+                                  <div className="text-[10px] font-black uppercase text-blue-600 mb-3 text-center border-b pb-2 border-slate-50">
+                                    {new Date(vacationMonth).toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'})}
+                                  </div>
+                                  <div className="grid grid-cols-7 gap-1">
+                                    {getDaysInMonth(vacationMonth).map(d => (
+                                      <button key={d} onClick={() => handleAddVacation(u.id, d)} className="aspect-square rounded-lg text-[10px] font-bold hover:bg-blue-50 text-slate-600 border border-transparent hover:border-blue-100">{parseInt(d.split('-')[2])}</button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center gap-2 font-bold text-slate-700 mb-6">
-                <ClipboardList size={18} className="text-blue-600" />
-                Результат планирования
+            {/* Итоговый график */}
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 overflow-visible">
+              <div className="flex items-center gap-2 mb-6 font-bold text-slate-700">
+                <ClipboardList size={18} className="text-blue-600" /> График на {new Date(currentMonth).toLocaleDateString('ru-RU', {month:'long'})}
               </div>
-              {!timetable ? (
-                <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[2rem] bg-slate-50/30">
-                  <Info className="mx-auto text-slate-200 mb-2" size={40} />
-                  <p className="text-slate-400 text-sm font-medium">Нет данных для отображения</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {Object.entries(timetable).sort().map(([date, assignedUsers]) => (
-                    <div key={date} className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {displayDates.map((date) => {
+                  const assigned = timetable[date] || [];
+                  return (
+                    <div key={date} className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-visible">
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{new Date(date).toLocaleDateString('ru-RU', {weekday:'short'})}</span>
-                        <span className="text-xs font-black text-slate-700">{date}</span>
+                        <span className="text-[10px] font-black text-blue-600 uppercase">{new Date(date).toLocaleDateString('ru-RU', {weekday:'short'})}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-700">{new Date(date).getDate()} {new Date(date).toLocaleDateString('ru-RU', {month:'short'})}</span>
+                          <div className="relative" ref={activeAddUserPopover === date ? addUserRef : null}>
+                            <button onClick={() => setActiveAddUserPopover(activeAddUserPopover === date ? null : date)} className={`p-1.5 rounded-lg ${activeAddUserPopover === date ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-50'}`}><UserPlus size={14}/></button>
+                            {activeAddUserPopover === date && (
+                              <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] py-2 animate-in fade-in slide-in-from-top-2">
+                                {users.filter(usr => !assigned.some(au => au.id === usr.id)).map(usr => (
+                                  <button key={usr.id} onClick={() => handleAssignmentChange(date, null, usr.id)} className="w-full text-left px-4 py-2 text-[11px] hover:bg-blue-50 font-bold text-slate-700 transition-colors">{usr.full_name || usr.name}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        {assignedUsers.map(u => (
-                          <div key={u.id} className="bg-slate-50 p-2 rounded-lg text-[11px] font-bold text-slate-600">
-                            {u.name}
+                        {assigned.map(u => (
+                          <div key={u.id} className="group relative flex items-center justify-between bg-slate-50 p-2.5 rounded-xl text-[11px] font-bold text-slate-600">
+                            <span className="truncate pr-2">{u.name}</span>
+                            <div className="flex gap-1">
+                              <button onClick={() => setActiveEditPopover(activeEditPopover === `${date}-${u.id}` ? null : `${date}-${u.id}`)} className="p-1 hover:bg-blue-100 rounded-md text-blue-400"><RotateCcw size={12}/></button>
+                              <button onClick={() => handleAssignmentChange(date, u.id, null)} className="p-1 hover:bg-red-100 rounded-md text-red-400"><X size={12}/></button>
+                            </div>
+                            {activeEditPopover === `${date}-${u.id}` && (
+                              <div ref={editRef} className="absolute bottom-full left-0 w-full mb-1 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] py-1 max-h-48 overflow-y-auto">
+                                {users.filter(usr => !assigned.some(au => au.id === usr.id)).map(usr => (
+                                  <button key={usr.id} onClick={() => handleAssignmentChange(date, u.id, usr.id)} className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-600 hover:text-white font-bold">{usr.full_name || usr.name}</button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
+                        {assigned.length === 0 && <div className="py-2 text-center text-[9px] text-slate-300 font-bold italic">Смена не назначена</div>}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
+          {/* Правая колонка: Параметры */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sticky top-8">
-              <div className="flex items-center gap-2 font-bold text-slate-700 border-b border-slate-50 pb-4 mb-6">
-                <Calendar size={18} className="text-blue-600" />
-                Параметры
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sticky top-8 z-10 overflow-visible">
+              <div className="flex items-center gap-2 font-bold text-slate-700 border-b border-slate-50 pb-4 mb-6 uppercase text-xs tracking-widest">
+                <CalendarDays size={18} className="text-blue-600" /> Параметры генерации
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Период</label>
-                  <input type="month" value={currentMonth} onChange={e => setCurrentMonth(e.target.value)} className="w-full bg-slate-50 border-0 p-3 text-sm rounded-2xl font-bold outline-none" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Смена</label>
-                  <input type="number" value={shiftSize} onChange={e => setShiftSize(e.target.value)} className="w-full bg-slate-50 border-0 p-3 text-sm rounded-2xl font-bold outline-none" />
-                </div>
-              </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4 overflow-visible">
 
-              <div className="mb-8">
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block">Выбор дат:</label>
-                <div className="grid grid-cols-7 gap-1">
-                  {[...Array(31)].map((_, i) => {
-                    const day = i + 1;
-                    const ds = `${currentMonth}-${day.toString().padStart(2, '0')}`;
-                    const isSel = selectedDutyDays.includes(ds);
-                    return (
-                      <button
-                        key={day}
-                        onClick={() => toggleDaySelection(ds)}
-                        className={`h-8 w-8 rounded-lg text-[10px] font-bold border transition-all ${isSel ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-slate-100 text-slate-300'}`}
-                      >
-                        {day}
+                  {/* Выбор периода для генерации */}
+                  <div className="space-y-1.5 relative" ref={monthPickerRef}>
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Период</label>
+                    <button onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)} className="w-full flex justify-between items-center bg-slate-50 border border-slate-100 p-3 text-[11px] rounded-2xl font-black transition-all hover:bg-slate-100">
+                      <span className="capitalize">{new Date(currentMonth).toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' })}</span>
+                      <Calendar size={14} className="text-blue-500" />
+                    </button>
+                    {isMonthPickerOpen && (
+                      <div className="absolute top-full left-0 w-64 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 z-[150] animate-in zoom-in-95">
+                        <div className="grid grid-cols-3 gap-1">
+                          {["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"].map((m, i) => (
+                            <button key={`m-${i}`} onClick={() => {setCurrentMonth(`${currentMonth.split('-')[0]}-${(i+1).toString().padStart(2,'0')}`); setIsMonthPickerOpen(false);}} className="py-2 text-[10px] font-black uppercase rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors">{m}</button>
+                          ))}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-slate-50 flex justify-between">
+                           <button onClick={() => setCurrentMonth(m => shiftMonth(m, -12))} className="text-[9px] font-bold text-slate-400 hover:text-slate-600">Предыдущий год</button>
+                           <button onClick={() => setCurrentMonth(m => shiftMonth(m, 12))} className="text-[9px] font-bold text-slate-400 hover:text-slate-600">Следующий год</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Людей на смену</label>
+                    <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-1">
+                      <button onClick={() => setShiftSize(Math.max(1, shiftSize-1))} className="p-2 text-slate-400 hover:text-blue-600 font-black">-</button>
+                      <input type="number" value={shiftSize} readOnly className="w-full bg-transparent border-0 text-center text-xs font-black text-slate-700" />
+                      <button onClick={() => setShiftSize(shiftSize+1)} className="p-2 text-slate-400 hover:text-blue-600 font-black">+</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Дни для распределения</label>
+                  <div className="grid grid-cols-7 gap-1 bg-slate-50/50 p-2 rounded-2xl border border-slate-100">
+                    {getDaysInMonth(currentMonth).map((d) => (
+                      <button key={`sel-day-${d}`} onClick={() => setSelectedDutyDays(prev => prev.includes(d) ? prev.filter(x => x!==d) : [...prev, d])} className={`aspect-square rounded-lg text-[10px] font-bold transition-all border ${selectedDutyDays.includes(d) ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200 hover:text-blue-400'}`}>
+                        {parseInt(d.split('-')[2])}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={isDistributing || selectedDutyDays.length === 0}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-              >
-                {isDistributing ? <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" /> : <><Play size={14} fill="currentColor" /> Генерировать</>}
-              </button>
+                <button
+                  onClick={async () => {
+                    setIsDistributing(true);
+                    try {
+                      const res = await api.post('/api/duties/generate/', { month: currentMonth, people_per_day: parseInt(shiftSize), dates: selectedDutyDays });
+                      const items = res.data?.data || res.data;
+                      if (Array.isArray(items)) {
+                        const mapped = items.reduce((acc, item) => {
+                          acc[item.date] = item.users.map(u => ({ id: u.id, name: u.full_name || u.name }));
+                          return acc;
+                        }, {});
+                        setTimetable(mapped);
+                      }
+                    } catch { setError("Ошибка генерации"); } finally { setIsDistributing(false); }
+                  }}
+                  disabled={isDistributing || selectedDutyDays.length === 0}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-30 shadow-xl shadow-slate-200 flex items-center justify-center gap-2"
+                >
+                  {isDistributing ? 'Генерация...' : ( <><Play size={14}/> Создать график</> )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

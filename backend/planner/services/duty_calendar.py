@@ -1,10 +1,10 @@
-import calendar
-
 from planner.models import Duty
 
 
 def get_duty_days(date_start, date_end):
-    data = Duty.objects.filter(date__gte=date_start, date__lte=date_end).order_by('date')
+    data = Duty.objects.filter(date__gte=date_start, date__lte=date_end).order_by(
+        "date"
+    )
     return data
 
 

@@ -1,10 +1,8 @@
-from datetime import date
-
 from planner.validators import validate_date_not_past
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from .models import DaysOff, DutyAssignment, Staff, Duty
+from .models import DaysOff, Duty, DutyAssignment, Staff
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -28,6 +26,7 @@ class DaysOffSerializer(serializers.ModelSerializer):
                 message="У этого сотрудника уже есть выходной на указанную дату",
             )
         ]
+
 
 class DutyAssignmentSerializer(serializers.ModelSerializer):
 

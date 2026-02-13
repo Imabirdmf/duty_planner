@@ -43,9 +43,11 @@ class DutyAssignment(models.Model):
     duty = models.ForeignKey(Duty, on_delete=models.CASCADE)
 
     objects = BulkUpdateOrCreateQuerySet.as_manager()
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user", "duty"], name="unique_user_duty")
         ]
+
     # def __str__(self):
     #     return f"{self.duty.date} - userid: {self.user.id}"

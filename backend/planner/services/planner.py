@@ -1,19 +1,22 @@
 import heapq
+from random import shuffle
 
 from django.db.models import F
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
+
 from .duty_calendar import get_duty_days
-from random import shuffle
 
 
 def create_plan(date_start, date_end, people_for_day=2):
     messages = {}
-    print('Иду за дьюти дейс')
+    print("Иду за дьюти дейс")
     duties = get_duty_days(date_start, date_end).order_by("date")
-    duty_assignments = DutyAssignment.objects.filter(duty__date__gte=date_start, duty__date__lte=date_end)
+    duty_assignments = DutyAssignment.objects.filter(
+        duty__date__gte=date_start, duty__date__lte=date_end
+    )
     print(duties)
     print(duty_assignments)
-    print('Иду за пользователями')
+    print("Иду за пользователями")
     staff = Staff.objects.all()
     users = [(user.priority, user.id) for user in staff]
     shuffle(users)
@@ -35,16 +38,15 @@ def create_plan(date_start, date_end, people_for_day=2):
             ):
                 create_duty_assignment(user[1], duty)
                 count += 1
-                added_users.append((user[0]+1, user[1]))
+                added_users.append((user[0] + 1, user[1]))
             else:
                 added_users.append(user)
-            print(f'finish for {duty}')
+            print(f"finish for {duty}")
 
         if len(added_users) != 0:
             for u in added_users:
                 heapq.heappush(users, (u[0], u[1]))
-            print('Очередь после возвращения', users)
-
+            print("Очередь после возвращения", users)
 
         dt = duty.date.strftime("%Y-%m-%d")
         messages[dt] = messages.get(dt, [])
@@ -60,7 +62,6 @@ def create_plan(date_start, date_end, people_for_day=2):
 
     for u in users:
         update_priority(u[1], u[0])
-
 
     return messages
 
@@ -84,7 +85,7 @@ def update_priority(user_id, value, diff=None):
     if value:
         Staff.objects.filter(id=user_id).update(priority=value)
     elif diff:
-        Staff.objects.filter(id=user_id).update(priority=F('priority')+diff)
+        Staff.objects.filter(id=user_id).update(priority=F("priority") + diff)
 
 
 def user_has_previous_duty(user_id, date):
