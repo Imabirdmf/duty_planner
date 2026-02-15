@@ -1,0 +1,31 @@
+FROM python:3.12-slim
+
+# Отключаем создание .pyc и буферизацию
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Рабочая директория контейнера
+WORKDIR /app
+
+# Устанавливаем системные зависимости (минимально)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копируем requirements отдельно (для кеширования)
+COPY backend/requirements.txt ./requirements.txt
+
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем весь backend
+COPY backend ./backend
+
+# Переходим в директорию backend (где manage.py)
+WORKDIR /app/backend
+
+# Открываем порт
+EXPOSE 8000
+
+# Запуск через gunicorn
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]

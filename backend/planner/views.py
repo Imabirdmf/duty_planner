@@ -16,7 +16,7 @@ from .serializers import (
 )
 from .services.assignments import get_assignments, make_assignment
 from .services.duty_calendar import save_duty_days
-from .services.planner import create_plan
+from .services.planner import create_plan, set_minimum_priority
 
 
 class StaffViewSet(viewsets.ModelViewSet):
@@ -70,6 +70,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
 
             try:
                 errors = create_plan(start_day, end_day, people_per_day)
+                set_minimum_priority()
                 duties = get_assignments(start_day, end_day)
                 serializer = DutyWithAssignmentsSerializer(duties, many=True)
                 data = {"errors": errors, "data": serializer.data}

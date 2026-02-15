@@ -81,7 +81,7 @@ def create_duty_assignment(user_id, duty):
     print("duty_assignment created")
 
 
-def update_priority(user_id, value, diff=None):
+def update_priority(user_id, value=None, diff=None):
     if value:
         Staff.objects.filter(id=user_id).update(priority=value)
     elif diff:
@@ -100,3 +100,11 @@ def user_has_previous_duty(user_id, date):
     print("user_has_previous_duty", user_previous_duty)
     print("duties", duties)
     return user_previous_duty
+
+def set_minimum_priority():
+    users = Staff.objects.filter(priority__gt=0)
+    print(users)
+    min_priority = min(u.priority for u in users)
+    print(min_priority)
+    for u in users:
+        update_priority(user_id=u.id, diff=-min_priority)
