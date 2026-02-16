@@ -1,0 +1,44 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Фон иконки (скругленный квадрат) -->
+  <rect width="512" height="512" rx="112" fill="white"/>
+  
+  <!-- Основная подложка-календарь (основание) -->
+  <rect x="106" y="130" width="300" height="280" rx="40" fill="#F1F5F9"/>
+  
+  <!-- Синяя шапка календаря -->
+  <path d="M106 170C106 147.909 123.909 130 146 130H366C388.091 130 406 147.909 406 170V210H106V170Z" fill="#3B82F6"/>
+
+  <!-- Крепления (кольца) — теперь аккуратно вписаны -->
+  <rect x="155" y="90" width="24" height="70" rx="12" fill="#1E293B"/>
+  <rect x="333" y="90" width="24" height="70" rx="12" fill="#1E293B"/>
+
+  <!-- Центральная фигура: Схематичный лист календаря -->
+  <g filter="url(#shadow)">
+    <!-- Рамка внутреннего листа -->
+    <rect x="186" y="240" width="140" height="110" rx="16" stroke="#1E293B" stroke-width="18" fill="none"/>
+    
+    <!-- Горизонтальная полоса (имитация шапки листка) -->
+    <path d="M186 275H326" stroke="#3B82F6" stroke-width="18" stroke-linecap="round"/>
+    
+    <!-- Точки (имитация дат) -->
+    <circle cx="225" cy="315" r="8" fill="#3B82F6"/>
+    <circle cx="256" cy="315" r="8" fill="#3B82F6"/>
+    <circle cx="287" cy="315" r="8" fill="#3B82F6"/>
+  </g>
+
+  <!-- Индикатор статуса (красная точка) -->
+  <circle cx="390" cy="115" r="28" fill="#EF4444" stroke="white" stroke-width="8"/>
+
+  <defs>
+    <filter id="shadow" x="160" y="220" width="192" height="160" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="8"/>
+      <feGaussianBlur stdDeviation="12"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.231373 0 0 0 0 0.513726 0 0 0 0 0.964706 0 0 0 0.12 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+  </defs>
+</svg>
