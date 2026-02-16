@@ -271,6 +271,7 @@ const App = () => {
                       <tr key={u.id} className="group">
                         <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors">
                           <div className="font-bold text-slate-800 text-sm truncate">{u.full_name || u.name}</div>
+                          <div className="text-[11px] text-slate-400 truncate mt-0.5">{u.email}</div>
                         </td>
                         <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors overflow-visible">
                           <div className="flex flex-wrap gap-1.5 items-center">
