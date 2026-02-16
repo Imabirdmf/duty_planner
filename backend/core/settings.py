@@ -122,4 +122,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://dutyplannerfrontend-production.up.railway.app",
+]
 
