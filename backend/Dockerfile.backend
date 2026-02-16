@@ -30,4 +30,4 @@ RUN chmod +x /entrypoint.sh
 WORKDIR /app/backend
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["sh", "-c", "gunicorn core.wsgi:application --bind 0.0.0.0:${PORT}"]
