@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
     "planner",
     "corsheaders",
 ]
@@ -78,15 +79,22 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+}
+
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# DATABASES = {
-#     "default": dj_database_url.config(
-#         default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}", conn_max_age=600
-#     )
-# }
-DATABASES = {"default": dj_database_url.config(conn_max_age=600, ssl_require=True)}
+DATABASES = {
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=600
+    )
+}
+# DATABASES = {"default": dj_database_url.config(conn_max_age=600, ssl_require=True)}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -126,7 +134,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-CSRF_TRUSTED_ORIGINS = ["https://*.railway.app"]
+# CSRF_TRUSTED_ORIGINS = ["https://*.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True
 
