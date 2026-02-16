@@ -1,0 +1,32 @@
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_SYSTEM_PYTHON=1
+ENV UV_PROJECT_ENVIRONMENT="/usr/local"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем uv
+RUN curl -Ls https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Копируем только файлы зависимостей
+COPY pyproject.toml uv.lock ./
+
+# Устанавливаем зависимости в системное окружение
+RUN uv sync --frozen --no-dev --no-install-project
+
+# Копируем backend
+COPY backend ./backend
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+WORKDIR /app/backend
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]

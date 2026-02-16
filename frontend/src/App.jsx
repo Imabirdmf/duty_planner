@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
   timeout: 5000,
 });
@@ -68,7 +68,7 @@ const App = () => {
   // --- API запросы ---
   const fetchUsers = async () => {
     try {
-      const res = await api.get('/api/users/');
+      const res = await api.get('/users/');
       setUsers(res.data);
     } catch { setError("Failed to load users"); }
   };
@@ -76,7 +76,7 @@ const App = () => {
   const fetchVacations = async () => {
     const { startDate, endDate } = getMonthRange(vacationMonth);
     try {
-      const res = await api.get('/api/days-off/', { params: { start_date: startDate, end_date: endDate } });
+      const res = await api.get('/days-off/', { params: { start_date: startDate, end_date: endDate } });
       setVacations(res.data);
     } catch (err) {
         if (err.response) {
@@ -94,7 +94,7 @@ const App = () => {
   const fetchTimetable = async () => {
     const { startDate, endDate } = getMonthRange(currentMonth);
     try {
-      const res = await api.get('/api/duties/list_assignments/', { params: { start_date: startDate, end_date: endDate } });
+      const res = await api.get('/duties/list_assignments/', { params: { start_date: startDate, end_date: endDate } });
       const items = res.data?.data || res.data;
       if (Array.isArray(items)) {
         const mapped = items.reduce((acc, item) => {
@@ -124,7 +124,7 @@ const App = () => {
     setActiveEditPopover(null);
     setActiveAddUserPopover(null);
     try {
-      await api.post(`/api/duties/assign/`,
+      await api.post(`/duties/assign/`,
         { user_id_prev: oldId, user_id_new: newId, date },
         { params: { start_date: startDate, end_date: endDate } }
       );
@@ -135,7 +135,7 @@ const App = () => {
   const handleAddVacation = async (userId, date) => {
     setError(null);
     try {
-      await api.post('/api/days-off/', { user: userId, date });
+      await api.post('/days-off/', { user: userId, date });
       await fetchVacations();
       setActiveVacationPopover(null);
     } catch (err) {
@@ -158,7 +158,7 @@ const App = () => {
 
   const handleDeleteVacation = async (id) => {
     try {
-      await api.delete(`/api/days-off/${id}/`);
+      await api.delete(`/days-off/${id}/`);
       await fetchVacations();
     } catch { setError("Failed to delete"); }
   };
@@ -353,7 +353,7 @@ const App = () => {
                             {activeEditPopover === `${date}-${u.id}` && (
                               <div ref={editRef} className="absolute bottom-full left-0 w-full mb-1 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] py-1 max-h-48 overflow-y-auto">
                                 {users.filter(usr => !assigned.some(au => au.id === usr.id)).map(usr => (
-                                  <button key={usr.id} onClick={() => handleAssignmentChange(date, u.id, usr.id)} className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-600 hover:text-white font-bold">{usr.full_name || usr.name}</button>
+                                  <button key={usr.id} onClick={() => handleAssignmentChange(date, u.id, usr.id)} className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-100 font-bold">{usr.full_name || usr.name}</button>
                                 ))}
                               </div>
                             )}
@@ -429,7 +429,7 @@ const App = () => {
                     setHighlightedDates(new Set());
 
                     try {
-                      const res = await api.post('/api/duties/generate/', {
+                      const res = await api.post('/duties/generate/', {
                         month: currentMonth,
                         people_per_day: parseInt(shiftSize),
                         dates: selectedDutyDays

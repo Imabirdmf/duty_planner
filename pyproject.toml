@@ -3,20 +3,26 @@ name = "duty-planner"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
+
 dependencies = [
-    "black>=26.1.0",
     "django>=6.0.2",
+    "django-bulk-update-or-create>=0.3.0",
     "django-rest-framework>=0.1.0",
-    "mypy>=1.19.1",
-    "pytest>=9.0.2",
-    "pytest-coverage>=0.0",
+    "gunicorn>=25.1.0",
+    "librt==0.8.0",
     "python-dotenv>=1.2.1",
-    "ruff>=0.15.0",
     "urllib3>=2.6.3",
 ]
 
 [dependency-groups]
+
 dev = [
+    "black>=26.1.0",
+    "coverage==7.13.4",
+    "mypy>=1.19.1",
+    "platformdirs==4.9.1",
+    "pytest>=9.0.2",
+    "pytest-coverage>=0.0",
     "ruff>=0.15.0",
 ]
 
@@ -27,10 +33,6 @@ disable_error_code = 'var-annotated'
 
 [tool.ruff]
 line-length = 120
-
-exclude = [
-    "__init__.py"
-]
-
+exclude = ["__init__.py"]
 preview = true
 lint.select = ["E", "F", "I", "C90"]
