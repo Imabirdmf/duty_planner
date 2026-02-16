@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*', '.railway.app']
 
 APPEND_SLASH = False
 
@@ -126,12 +126,11 @@ STATIC_URL = "static/django/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://dutyplannerfrontend-production.up.railway.app",
-    "https://dutyplannerbackend-production.up.railway.app",
+    "https://*.railway.app"
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://dutyplannerfrontend-production.up.railway.app",
+    "https://*.railway.app",
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
