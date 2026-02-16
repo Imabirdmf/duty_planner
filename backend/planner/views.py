@@ -6,10 +6,10 @@ from rest_framework.response import Response
 
 from .models import DaysOff, DutyAssignment, Staff
 from .serializers import (
+    DatesQuerySerializer,
     DaysOffSerializer,
     DutyAssignmentChangeSerializer,
     DutyAssignmentGenerateSerializer,
-    DatesQuerySerializer,
     DutyAssignmentSerializer,
     DutyWithAssignmentsSerializer,
     StaffSerializer,
@@ -30,8 +30,8 @@ class DaysOffViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         query_params = self.request.query_params
-        start_date = query_params.get('start_date', None)
-        end_date = query_params.get('end_date', None)
+        start_date = query_params.get("start_date", None)
+        end_date = query_params.get("end_date", None)
         if start_date and end_date:
             qs = get_list_or_404(DaysOff, date__gte=start_date, date__lte=end_date)
         else:
@@ -107,4 +107,3 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
                 {"error": f"Не удалось переназначить: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-

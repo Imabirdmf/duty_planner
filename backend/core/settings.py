@@ -10,10 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-import dj_database_url
 import os
 from pathlib import Path
 
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ['*', '.railway.app']
+ALLOWED_HOSTS = ["*", ".railway.app"]
 
 APPEND_SLASH = False
 
@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "planner",
-    'corsheaders'
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
@@ -81,9 +81,8 @@ WSGI_APPLICATION = "core.wsgi.application"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}",
-        conn_max_age=600
+    "default": dj_database_url.config(
+        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}", conn_max_age=600
     )
 }
 
@@ -125,12 +124,10 @@ USE_TZ = True
 STATIC_URL = "static/django/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://*.railway.app"
-]
+CSRF_TRUSTED_ORIGINS = ["https://*.railway.app"]
 
 CORS_ALLOWED_ORIGINS = [
     "https://*.railway.app",
 ]
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

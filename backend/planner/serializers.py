@@ -62,4 +62,3 @@ class DutyWithAssignmentsSerializer(serializers.ModelSerializer):
         assignments = obj.dutyassignment_set.all()
         users = [a.user for a in assignments]
         return StaffSerializer(users, many=True).data
-

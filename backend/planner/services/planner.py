@@ -101,6 +101,7 @@ def user_has_previous_duty(user_id, date):
     print("duties", duties)
     return user_previous_duty
 
+
 def set_minimum_priority():
     users = Staff.objects.filter(priority__gt=0)
     print(users)
