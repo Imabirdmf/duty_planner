@@ -127,6 +127,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 CSRF_TRUSTED_ORIGINS = [
     "https://dutyplannerfrontend-production.up.railway.app",
+    "https://dutyplannerbackend-production.up.railway.app",
 ]
 
 CORS_ALLOWED_ORIGINS = [
