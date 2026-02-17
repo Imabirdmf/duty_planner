@@ -39,5 +39,5 @@ jobs:
             -Dsonar.projectKey=Imabirdmf_duty_planner
             -Dsonar.organization=imabirdmf
             -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.coverage.exclusions=**/__init__.py,backend/planner/migrations/*,backend/planner/management/*, backend/db/*, backend/core/*
+            -Dsonar.coverage.exclusions=**/__init__.py,backend/planner/migrations/*,backend/planner/management/*,backend/db/*,backend/core/*
             -Dsonar.tests=backend/tests
