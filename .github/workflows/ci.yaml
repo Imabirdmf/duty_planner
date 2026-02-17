@@ -34,10 +34,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on SonarQube, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
           SONAR_HOST_URL: https://sonarcloud.io   # add the URL of your instance to the secrets of this repo with the name SONAR_HOST_URL (Settings > Secrets > Actions > add new repository secret)
-        with:
-          args: >
-            -Dsonar.projectKey=Imabirdmf_duty_planner
-            -Dsonar.organization=imabirdmf
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.coverage.exclusions=**/__init__.py,backend/planner/migrations/*,backend/planner/management/*,backend/db/*,backend/core/*
-            -Dsonar.tests=backend/tests
+#        with:
+#          args: >
+#            -Dsonar.projectKey=Imabirdmf_duty_planner
+#            -Dsonar.organization=imabirdmf
+#            -Dsonar.python.coverage.reportPaths=coverage.xml
+#            -Dsonar.coverage.exclusions=**/__init__.py,backend/planner/migrations/*,backend/planner/management/*,backend/db/*,backend/core/*
+#            -Dsonar.tests=backend/tests
