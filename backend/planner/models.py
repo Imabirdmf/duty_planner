@@ -48,5 +48,3 @@ class DutyAssignment(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "duty"], name="unique_user_duty")
         ]
-
-
