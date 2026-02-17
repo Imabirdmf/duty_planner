@@ -1,7 +1,6 @@
 from datetime import date
 
 from django.core.management.base import BaseCommand
-
 from planner.services.duty_calendar import save_duty_days
 from planner.services.planner import create_plan
 
@@ -12,6 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         print(save_duty_days(dates))
         print(create_plan(date(2026, 2, day=1), date(2026, 2, day=28)))
+
 
 dates = [
     "2026-02-01",
@@ -41,7 +41,7 @@ dates = [
     "2026-02-07",
     "2026-02-14",
     "2026-02-21",
-    "2026-02-28"
+    "2026-02-28",
 ]
 # class Command(BaseCommand):
 #     help = "make_assignment"

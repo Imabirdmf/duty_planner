@@ -213,6 +213,8 @@ dependencies = [
     { name = "gunicorn" },
     { name = "librt" },
     { name = "psycopg2-binary" },
+    { name = "pytest" },
+    { name = "pytest-django" },
     { name = "python-dotenv" },
     { name = "urllib3" },
     { name = "whitenoise" },
@@ -239,6 +241,8 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.1.0" },
     { name = "librt", specifier = "==0.8.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-django", specifier = ">=4.12.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "urllib3", specifier = ">=2.6.3" },
     { name = "whitenoise", specifier = ">=6.11.0" },
@@ -486,6 +490,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/01/81/1d954849aed17b254d1c397eb4447a05eedce612a56b627c071df2ce00c1/pytest-coverage-0.0.tar.gz", hash = "sha256:db6af2cbd7e458c7c9fd2b4207cee75258243c8a81cad31a7ee8cfad5be93c05", size = 873, upload-time = "2015-06-17T21:50:38.956Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/4b/d95b052f87db89a2383233c0754c45f6d3b427b7a4bcb771ac9316a6fae1/pytest_coverage-0.0-py2.py3-none-any.whl", hash = "sha256:dedd084c5e74d8e669355325916dc011539b190355021b037242514dee546368", size = 2013, upload-time = "2015-06-17T22:08:36.771Z" },
+]
+
+[[package]]
+name = "pytest-django"
+version = "4.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/13/2b/db9a193df89e5660137f5428063bcc2ced7ad790003b26974adf5c5ceb3b/pytest_django-4.12.0.tar.gz", hash = "sha256:df94ec819a83c8979c8f6de13d9cdfbe76e8c21d39473cfe2b40c9fc9be3c758", size = 91156, upload-time = "2026-02-14T18:40:49.235Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/a5/41d091f697c09609e7ef1d5d61925494e0454ebf51de7de05f0f0a728f1d/pytest_django-4.12.0-py3-none-any.whl", hash = "sha256:3ff300c49f8350ba2953b90297d23bf5f589db69545f56f1ec5f8cff5da83e85", size = 26123, upload-time = "2026-02-14T18:40:47.381Z" },
 ]
 
 [[package]]

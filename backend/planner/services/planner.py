@@ -14,18 +14,18 @@ def create_plan(date_start, date_end, people_for_day=2):
     duty_assignments = DutyAssignment.objects.filter(
         duty__date__gte=date_start, duty__date__lte=date_end
     )
-    print('duties', duties)
-    print('duty_assignments', duty_assignments)
+    print("duties", duties)
+    print("duty_assignments", duty_assignments)
     print("Иду за пользователями")
     staff = Staff.objects.all()
     users = [(user.priority, user.id) for user in staff]
     shuffle(users)
     heapq.heapify(users)
-    print('users', users)
+    print("users", users)
     for duty in duties:
 
         count = duty_assignments.filter(duty__id=duty.id).count()
-        print('count', count)
+        print("count", count)
         print("очередь", users)
         print("duty", duty)
         added_users = []
@@ -107,7 +107,7 @@ def user_has_previous_duty(user_id, date):
 
 def set_minimum_priority():
     users = Staff.objects.filter(priority__gt=0)
-    print('priority', users)
+    print("priority", users)
     if len(users) > 0:
         min_priority = min(u.priority for u in users)
         print(min_priority)
