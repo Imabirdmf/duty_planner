@@ -178,7 +178,7 @@ const App = () => {
     return () => document.removeEventListener('mousedown', clickOut);
   }, []);
 
-  const displayDates = Array.from(new Set([...Object.keys(timetable), ...selectedDutyDays])).sort();
+  const displayDates = Array.from(new Set([...Object.keys(timetable), ...selectedDutyDays])).sort((a, b) => new Date(a) - new Date(b));
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 p-4 md:p-8">
@@ -290,7 +290,7 @@ const App = () => {
                                   </div>
                                   <div className="grid grid-cols-7 gap-1">
                                     {getDaysInMonth(vacationMonth).map(d => (
-                                      <button key={d} onClick={() => handleAddVacation(u.id, d)} className="aspect-square rounded-lg text-[10px] font-bold hover:bg-blue-50 text-slate-600 border border-transparent hover:border-blue-100">{parseInt(d.split('-')[2])}</button>
+                                      <button key={d} onClick={() => handleAddVacation(u.id, d)} className="aspect-square rounded-lg text-[10px] font-bold hover:bg-blue-50 text-slate-600 border border-transparent hover:border-blue-100">{Number.parseInt(d.split('-')[2], 10)}</button>
                                     ))}
                                   </div>
                                 </div>
@@ -385,8 +385,8 @@ const App = () => {
 
                   {/* Period selector for generation */}
                   <div className="space-y-1.5 relative" ref={monthPickerRef}>
-                    <label className="text-[10px] font-black text-slate-400 uppercase">Period</label>
-                    <button onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)} className="w-full flex justify-between items-center bg-slate-50 border border-slate-100 p-3 text-[11px] rounded-2xl font-black transition-all hover:bg-slate-100">
+                    <label htmlFor="period-selector-btn" className="text-[10px] font-black text-slate-400 uppercase">Period</label>
+                    <button id="period-selector-btn" onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)} className="w-full flex justify-between items-center bg-slate-50 border border-slate-100 p-3 text-[11px] rounded-2xl font-black transition-all hover:bg-slate-100">
                       <span className="capitalize">{new Date(currentMonth).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
                       <Calendar size={14} className="text-blue-500" />
                     </button>
@@ -406,21 +406,21 @@ const App = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase">People per Shift</label>
+                    <label htmlFor="shift-size-input" className="text-[10px] font-black text-slate-400 uppercase">People per Shift</label>
                     <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-1">
                       <button onClick={() => setShiftSize(Math.max(1, shiftSize-1))} className="p-2 text-slate-400 hover:text-blue-600 font-black">-</button>
-                      <input type="number" value={shiftSize} readOnly className="w-full bg-transparent border-0 text-center text-xs font-black text-slate-700" />
+                      <input id="shift-size-input" type="number" value={shiftSize} readOnly className="w-full bg-transparent border-0 text-center text-xs font-black text-slate-700" />
                       <button onClick={() => setShiftSize(shiftSize+1)} className="p-2 text-slate-400 hover:text-blue-600 font-black">+</button>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase">Days to Schedule</label>
+                  <span className="block text-[10px] font-black text-slate-400 uppercase">Days to Schedule</span>
                   <div className="grid grid-cols-7 gap-1 bg-slate-50/50 p-2 rounded-2xl border border-slate-100">
                     {getDaysInMonth(currentMonth).map((d) => (
                       <button key={`sel-day-${d}`} onClick={() => setSelectedDutyDays(prev => prev.includes(d) ? prev.filter(x => x!==d) : [...prev, d])} className={`aspect-square rounded-lg text-[10px] font-bold transition-all border ${selectedDutyDays.includes(d) ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200 hover:text-blue-400'}`}>
-                        {parseInt(d.split('-')[2])}
+                        {Number.parseInt(d.split('-')[2], 10)}
                       </button>
                     ))}
                   </div>
@@ -436,7 +436,7 @@ const App = () => {
                     try {
                       const res = await api.post('/duties/generate/', {
                         month: currentMonth,
-                        people_per_day: parseInt(shiftSize),
+                        people_per_day: Number.parseInt(shiftSize),
                         dates: selectedDutyDays
                       });
 

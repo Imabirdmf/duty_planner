@@ -26,7 +26,7 @@ def make_assignment(duty_date, prev_user=None, new_user=None):
     print(duty)
     with transaction.atomic():
         if prev_user is None and new_user:
-            assignment = DutyAssignment.objects.create(duty=duty, user_id=new_user)
+            DutyAssignment.objects.create(duty=duty, user_id=new_user)
             update_priority(new_user, None, diff=1)
         elif prev_user and new_user:
             assignment = (

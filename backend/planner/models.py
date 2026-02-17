@@ -49,5 +49,4 @@ class DutyAssignment(models.Model):
             models.UniqueConstraint(fields=["user", "duty"], name="unique_user_duty")
         ]
 
-    # def __str__(self):
-    #     return f"{self.duty.date} - userid: {self.user.id}"
+
