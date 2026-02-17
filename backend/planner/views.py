@@ -96,9 +96,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         end_date = query_serializer.validated_data["end_date"]
 
         try:
-            print("Меняю назначение")
             make_assignment(prev_user=prev_user, new_user=new_user, duty_date=date)
-            print("Получаю назначения")
             duties = get_assignments(start_date, end_date)
             serializer = DutyWithAssignmentsSerializer(duties, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)

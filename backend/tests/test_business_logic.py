@@ -147,11 +147,11 @@ class TestPlannerService:
 
     def test_update_priority_decrease(self, staff_users):
         """Тест уменьшения приоритета"""
-        user = staff_users[1]  # У него priority = 1
+        user = staff_users[1]  # У него priority = 2
         update_priority(user.id, diff=-1)
 
         user.refresh_from_db()
-        assert user.priority == 0
+        assert user.priority == 1
 
     def test_user_has_previous_duty_true(self, staff_user, duty_days):
         """Тест проверки предыдущего дежурства - есть"""
@@ -265,8 +265,11 @@ class TestAssignmentsService:
 
     def test_make_assignment_replace_user(self, duty_assignment, staff_users):
         """Тест замены пользователя"""
+        print(staff_users)
         old_user = duty_assignment.user
+        print("old_user", old_user)
         new_user = staff_users[2]  # Берем другого пользователя
+        print("new_user", new_user)
 
         old_priority = old_user.priority
         new_priority = new_user.priority
@@ -382,7 +385,7 @@ class TestDutyCalendarService:
     def test_save_duty_days_mixed_new_and_existing(self, duty_days, date_range):
         """Тест сохранения когда часть дней уже существует"""
         # duty_days уже создал дни
-        existing_dates = [d.date for d in duty_days[:3]]
+        existing_dates = [d.date for d in duty_days]
         new_dates = [date_range["end"] + timedelta(days=i) for i in range(1, 4)]
 
         all_dates = existing_dates + new_dates

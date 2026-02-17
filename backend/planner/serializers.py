@@ -41,8 +41,8 @@ class DatesQuerySerializer(serializers.Serializer):
 
 
 class DutyAssignmentGenerateSerializer(serializers.Serializer):
-    dates = serializers.ListField(child=serializers.DateField())
-    people_per_day = serializers.IntegerField(max_value=10)
+    dates = serializers.ListField(child=serializers.DateField(), allow_empty=False)
+    people_per_day = serializers.IntegerField(max_value=10, min_value=1)
 
 
 class DutyAssignmentChangeSerializer(serializers.Serializer):

@@ -16,4 +16,5 @@ def save_duty_days(dates):
         match_field=["date"],
     )
     data = get_duty_days(date_start=dates_sorted[0], date_end=dates_sorted[-1])
+    print("data", data)
     return data

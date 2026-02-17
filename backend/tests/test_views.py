@@ -225,8 +225,7 @@ class TestDutyAssignmentViewSet:
             "user_id_new": staff_user.id,
             "date": duty_day.date.isoformat(),
         }
-        response = api_client.post(url, data, params=params, format="json")
-
+        response = api_client.post(url, data, query_params=params, format="json")
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
 
@@ -248,7 +247,7 @@ class TestDutyAssignmentViewSet:
             "user_id_new": new_user.id,
             "date": duty_assignment.duty.date.isoformat(),
         }
-        response = api_client.post(url, data, params=params, format="json")
+        response = api_client.post(url, data, query_params=params, format="json")
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -268,7 +267,7 @@ class TestDutyAssignmentViewSet:
             "user_id_new": None,
             "date": duty_assignment.duty.date.isoformat(),
         }
-        response = api_client.post(url, data, params=params, format="json")
+        response = api_client.post(url, data, query_params=params, format="json")
 
         assert response.status_code == status.HTTP_200_OK
 

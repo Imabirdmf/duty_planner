@@ -44,9 +44,6 @@ def staff_user(db):
 def staff_users(db):
     users = [
         Staff.objects.create(
-            first_name="Иван", last_name="Иванов", email="ivan@example.com", priority=0
-        ),
-        Staff.objects.create(
             first_name="Петр", last_name="Петров", email="petr@example.com", priority=1
         ),
         Staff.objects.create(

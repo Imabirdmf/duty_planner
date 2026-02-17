@@ -1,0 +1,11 @@
+[run]
+source = backend/
+branch = true
+omit =
+    backend/__init__.py
+    backend/db/*
+    backend/core/*
+    backend/planner/management/*
+relative_files = true
+
+[report]
