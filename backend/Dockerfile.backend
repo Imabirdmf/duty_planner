@@ -5,27 +5,27 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_PROJECT_ENVIRONMENT="/usr/local" \
     DJANGO_SETTINGS_MODULE=core.settings \
-    PATH="/usr/local/bin:$PATH"
+    PATH="/root/.local/bin:/usr/local/bin:$PATH"
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential \
     && rm -rf /var/lib/apt/lists/* \
-    && addgroup --system appgroup && adduser --system --group appuser \
-    && curl -Ls https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+
+RUN /root/.local/bin/uv sync --frozen --no-dev --no-install-project
 
 COPY backend ./backend
 COPY entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
-
-RUN mkdir -p /app/backend/staticfiles && \
-    chown appuser:appgroup /app/backend/staticfiles && \
-    chmod 755 /app/backend/staticfiles
+RUN addgroup --system appgroup && adduser --system --group appuser \
+    && chmod +x /entrypoint.sh \
+    && mkdir -p /app/backend/staticfiles \
+    && chown -R appuser:appgroup /app/backend/staticfiles \
+    && chmod 755 /app/backend/staticfiles
 
 USER appuser
 WORKDIR /app/backend
