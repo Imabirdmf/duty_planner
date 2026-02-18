@@ -1,8 +1,7 @@
 import heapq
 from random import shuffle
 
-from django.db.models import F
-from django.db.models import Min
+from django.db.models import F, Min
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
 
 from .duty_calendar import get_duty_days
@@ -91,9 +90,7 @@ def save_messages(messages, count, duty, people_for_day):
     dt = duty.date.strftime("%Y-%m-%d")
     messages[dt] = messages.get(dt, [])
     if count == 0:
-        messages[dt].append(
-            f"На дату {dt} никто не назначен, а надо {people_for_day}"
-        )
+        messages[dt].append(f"На дату {dt} никто не назначен, а надо {people_for_day}")
 
     elif count < people_for_day:
         messages[dt].append(
