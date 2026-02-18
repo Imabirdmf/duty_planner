@@ -21,9 +21,11 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY backend ./backend
 COPY entrypoint.sh /entrypoint.sh
 
-RUN chown -R appuser:appgroup /app && \
-    chmod -R 555 /app && \
-    chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+RUN mkdir -p /app/backend/staticfiles && \
+    chown appuser:appgroup /app/backend/staticfiles && \
+    chmod 755 /app/backend/staticfiles
 
 USER appuser
 WORKDIR /app/backend
