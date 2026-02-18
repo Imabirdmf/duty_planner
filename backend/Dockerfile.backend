@@ -17,12 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && adduser --system --group appuser \
     && curl -Ls https://astral.sh/uv/install.sh | sh
 
-COPY --chown=appuser:appgroup pyproject.toml uv.lock ./
+COPY --chown=appuser:appgroup --chmod=444 pyproject.toml uv.lock ./
 
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY --chown=appuser:appgroup backend ./backend
-COPY --chown=appuser:appgroup entrypoint.sh /entrypoint.sh
+COPY --chown=appuser:appgroup --chmod=444 backend ./backend
+COPY --chown=appuser:appgroup --chmod=555 entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
