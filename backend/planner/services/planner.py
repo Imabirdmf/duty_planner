@@ -38,7 +38,7 @@ def create_plan(date_start, date_end, people_for_day=2):
             for user in added_users:
                 heapq.heappush(users, user)
 
-        save_messages(messages, count, duty, people_for_day)
+        messages.update(save_messages(messages, count, duty, people_for_day))
 
     for user_priority, user_id in users:
         update_priority(user_priority, value=user_id)
@@ -47,7 +47,7 @@ def create_plan(date_start, date_end, people_for_day=2):
 
 
 def user_is_unavailable(user_id, date):
-    return all(get_days_off(user_id, date) and user_has_previous_duty(user_id, date))
+    return any((get_days_off(user_id, date), user_has_previous_duty(user_id, date)))
 
 
 def get_days_off(user_id, date):
@@ -90,13 +90,15 @@ def set_minimum_priority():
 
 
 def save_messages(messages, count, duty, people_for_day):
+    messages = {}
     dt = duty.date.strftime("%Y-%m-%d")
     if count == 0:
-        messages[dt].setdefault(
+        messages.setdefault(
             dt, [f"На дату {dt} никто не назначен, а надо {people_for_day}"]
         )
 
     elif count < people_for_day:
-        messages[dt].setdefault(
+        messages.setdefault(
             dt, [f"На дату {dt} назначено {count} дежурных вместо {people_for_day}"]
         )
+    return messages
