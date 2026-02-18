@@ -1,23 +1,23 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS uv
-
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_PROJECT_ENVIRONMENT="/usr/local" \
-    DJANGO_SETTINGS_MODULE=core.settings
+    DJANGO_SETTINGS_MODULE=core.settings \
+    PATH="/root/.local/bin:/usr/local/bin:$PATH"
 
 WORKDIR /app
 
-COPY --from=uv /uv /usr/local/bin/uv
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    curl build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf --proto '=https' --tlsv1.2 https://astral.sh/uv/install.sh | sh
 
+# Копирование файлов зависимостей
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+
+RUN /root/.local/bin/uv sync --frozen --no-dev --no-install-project
 
 COPY backend ./backend
 COPY entrypoint.sh /entrypoint.sh
