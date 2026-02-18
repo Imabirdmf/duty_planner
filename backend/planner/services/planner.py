@@ -22,9 +22,7 @@ def create_plan(date_start, date_end, people_for_day=2):
 
         count = duty_assignments.filter(duty__id=duty.id).count()
         added_users = []
-        while count < people_for_day:
-            if len(users) == 0:
-                break
+        while users and count < people_for_day:
 
             user_priority, user_id = heapq.heappop(users)
             if not user_is_unavailable(user_id, duty.date):
@@ -34,9 +32,8 @@ def create_plan(date_start, date_end, people_for_day=2):
             else:
                 added_users.append((user_priority, user_id))
 
-        if len(added_users) != 0:
-            for user in added_users:
-                heapq.heappush(users, user)
+        for user in added_users:
+            heapq.heappush(users, user)
 
         save_messages(messages, count, duty, people_for_day)
 
