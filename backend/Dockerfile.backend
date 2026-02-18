@@ -1,38 +1,30 @@
 FROM python:3.13-slim
 
-# Настраиваем переменные окружения
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_PROJECT_ENVIRONMENT="/usr/local" \
     DJANGO_SETTINGS_MODULE=core.settings \
-    # Указываем путь, куда uv установит бинарник
     PATH="/usr/local/bin:$PATH"
 
 WORKDIR /app
 
-# 1. Устанавливаем системные пакеты и uv в /usr/local/bin (чтобы был доступен всем)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
+    curl build-essential \
     && rm -rf /var/lib/apt/lists/* \
-    && addgroup --system appgroup \
-    && adduser --system --group appuser \
-    # Устанавливаем uv напрямую в системный путь
+    && addgroup --system appgroup && adduser --system --group appuser \
     && curl -Ls https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
-# 2. Копируем файлы зависимостей с правами только на чтение (SonarCloud happy)
-COPY --chown=appuser:appgroup --chmod=444 pyproject.toml uv.lock ./
-
-# 3. Устанавливаем зависимости
-# Теперь uv точно найдется, так как он в /usr/local/bin
+COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# 4. Копируем остальное
-COPY --chown=appuser:appgroup --chmod=444 backend ./backend
-COPY --chown=appuser:appgroup --chmod=555 entrypoint.sh /entrypoint.sh
+COPY backend ./backend
+COPY entrypoint.sh /entrypoint.sh
 
-# 5. Переключаемся на пользователя
+RUN chown -R appuser:appgroup /app && \
+    chmod -R 555 /app && \
+    chmod +x /entrypoint.sh
+
 USER appuser
 WORKDIR /app/backend
 
