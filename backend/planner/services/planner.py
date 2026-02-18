@@ -38,7 +38,7 @@ def create_plan(date_start, date_end, people_for_day=2):
             for user in added_users:
                 heapq.heappush(users, user)
 
-        messages.update(save_messages(messages, count, duty, people_for_day))
+        save_messages(messages, count, duty, people_for_day)
 
     for user_priority, user_id in users:
         update_priority(user_priority, value=user_id)
@@ -90,7 +90,6 @@ def set_minimum_priority():
 
 
 def save_messages(messages, count, duty, people_for_day):
-    messages = {}
     dt = duty.date.strftime("%Y-%m-%d")
     if count == 0:
         messages.setdefault(
