@@ -114,6 +114,13 @@ const App = () => {
     fetchUsers();
   }, []);
 
+  // Validate shiftSize when users list changes
+  useEffect(() => {
+    if (users.length > 0 && shiftSize > users.length) {
+      setShiftSize(users.length);
+    }
+  }, [users]);
+
   useEffect(() => {
     fetchVacations();
   }, [vacationMonth]);
@@ -133,7 +140,26 @@ const App = () => {
         { params: { start_date: startDate, end_date: endDate } }
       );
       await fetchTimetable();
-    } catch { setError("Failed to update assignment"); }
+    } catch (err) {
+      if (err.response && err.response.status === 400) {
+        const data = err.response.data;
+        let errorMessage = "Failed to update assignment";
+        
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          errorMessage = data.detail;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+        
+        setError(errorMessage);
+      } else {
+        setError("Failed to update assignment");
+      }
+    }
   };
 
   const handleAddVacation = async (userId, date) => {
@@ -410,7 +436,7 @@ const App = () => {
                     <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-1">
                       <button onClick={() => setShiftSize(Math.max(1, shiftSize-1))} className="p-2 text-slate-400 hover:text-blue-600 font-black">-</button>
                       <input id="shift-size-input" type="number" value={shiftSize} readOnly className="w-full bg-transparent border-0 text-center text-xs font-black text-slate-700" />
-                      <button onClick={() => setShiftSize(shiftSize+1)} className="p-2 text-slate-400 hover:text-blue-600 font-black">+</button>
+                      <button onClick={() => setShiftSize(Math.min(users.length, shiftSize+1))} className="p-2 text-slate-400 hover:text-blue-600 font-black">+</button>
                     </div>
                   </div>
                 </div>
@@ -440,22 +466,11 @@ const App = () => {
                         dates: selectedDutyDays
                       });
 
-                      const items = res.data?.data || res.data;
+                      // Перезапрашиваем расписание с бэкенда
+                      await fetchTimetable();
+
+                      // Process errors from generation response
                       const errors = res.data?.errors || {};
-
-                      // Process schedule data
-                      if (Array.isArray(items)) {
-                        const mapped = items.reduce((acc, item) => {
-                          acc[item.date] = item.users.map(u => ({
-                            id: u.id,
-                            name: u.full_name || u.name
-                          }));
-                          return acc;
-                        }, {});
-                        setTimetable(mapped);
-                      }
-
-                      // Process errors
                       const warningMessages = [];
                       const datesToHighlight = new Set();
 
@@ -481,8 +496,32 @@ const App = () => {
                         }, 10000);
                       }
 
-                    } catch {
-                      setError("Generation failed");
+                    } catch (err) {
+                      if (err.response && err.response.status === 400) {
+                        // Handle 400 Bad Request errors
+                        const data = err.response.data;
+                        let errorMessage = "Generation failed";
+                        
+                        if (typeof data === 'string') {
+                          errorMessage = data;
+                        } else if (data.detail) {
+                          errorMessage = data.detail;
+                        } else if (data.error) {
+                          errorMessage = data.error;
+                        } else if (data.message) {
+                          errorMessage = data.message;
+                        } else {
+                          // Try to get first error from any field
+                          const firstError = Object.values(data).find(v => v);
+                          if (firstError) {
+                            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                          }
+                        }
+                        
+                        setError(errorMessage);
+                      } else {
+                        setError("Generation failed");
+                      }
                     } finally {
                       setIsDistributing(false);
                     }
