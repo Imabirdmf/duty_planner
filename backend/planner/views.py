@@ -4,7 +4,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import DaysOff, DutyAssignment, Staff
+from .models import DaysOff, DutyAssignment
 from .serializers import (
     DatesQuerySerializer,
     DaysOffSerializer,
@@ -20,8 +20,12 @@ from .services.planner import create_plan, set_minimum_priority
 
 
 class StaffViewSet(viewsets.ModelViewSet):
-    queryset = Staff.objects.all()
     serializer_class = StaffSerializer
+
+    def get_queryset(self):
+        from planner.services.repositories.staff_repository import StaffRepository
+        staff_repo = StaffRepository()
+        return staff_repo.get_all()
 
 
 class DaysOffViewSet(viewsets.ModelViewSet):

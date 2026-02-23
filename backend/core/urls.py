@@ -25,7 +25,7 @@ from planner.views import (
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
-router.register("users", StaffViewSet)
+router.register("users", StaffViewSet, basename="users")
 router.register("days-off", DaysOffViewSet)
 router.register("duties", DutyAssignmentViewSet)
 
