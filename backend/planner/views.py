@@ -24,6 +24,7 @@ class StaffViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         from planner.services.repositories.staff_repository import StaffRepository
+
         staff_repo = StaffRepository()
         return staff_repo.get_all()
 
