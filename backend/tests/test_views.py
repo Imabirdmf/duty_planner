@@ -14,21 +14,19 @@ class TestStaffViewSet:
 
     def test_list_staff(self, api_client, staff_users):
         """Тест получения списка сотрудников"""
-        url = reverse("staff-list")
-        response = api_client.get(url)
+        response = api_client.get("/api/users/")
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(staff_users)
 
     def test_create_staff(self, api_client):
         """Тест создания сотрудника"""
-        url = reverse("staff-list")
         data = {
             "first_name": "Тест",
             "last_name": "Тестов",
             "email": "test@example.com",
         }
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/users/", data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["first_name"] == "Тест"
@@ -38,8 +36,7 @@ class TestStaffViewSet:
 
     def test_retrieve_staff(self, api_client, staff_user):
         """Тест получения конкретного сотрудника"""
-        url = reverse("staff-detail", kwargs={"pk": staff_user.id})
-        response = api_client.get(url)
+        response = api_client.get(f"/api/users/{staff_user.id}/")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["id"] == staff_user.id
@@ -48,13 +45,12 @@ class TestStaffViewSet:
 
     def test_update_staff(self, api_client, staff_user):
         """Тест обновления сотрудника"""
-        url = reverse("staff-detail", kwargs={"pk": staff_user.id})
         data = {
             "first_name": "Обновленный",
             "last_name": "Пользователь",
             "email": "updated@example.com",
         }
-        response = api_client.put(url, data, format="json")
+        response = api_client.put(f"/api/users/{staff_user.id}/", data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["first_name"] == "Обновленный"
@@ -63,25 +59,47 @@ class TestStaffViewSet:
         staff_user.refresh_from_db()
         assert staff_user.first_name == "Обновленный"
 
+    def test_partial_update_staff(self, api_client, staff_user):
+        """Тест частичного обновления сотрудника"""
+        data = {"first_name": "Новое"}
+        response = api_client.patch(f"/api/users/{staff_user.id}/", data, format="json")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["first_name"] == "Новое"
+
+        staff_user.refresh_from_db()
+        assert staff_user.first_name == "Новое"
+        assert staff_user.last_name == "Иванов"  # Не изменилось
+
     def test_delete_staff(self, api_client, staff_user):
         """Тест удаления сотрудника"""
-        url = reverse("staff-detail", kwargs={"pk": staff_user.id})
-        response = api_client.delete(url)
+        response = api_client.delete(f"/api/users/{staff_user.id}/")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Staff.objects.count() == 0
 
     def test_create_staff_duplicate_email(self, api_client, staff_user):
         """Тест создания сотрудника с дублирующимся email"""
-        url = reverse("staff-list")
         data = {
             "first_name": "Другой",
             "last_name": "Человек",
             "email": staff_user.email,  # дублирующийся email
         }
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/users/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_staff_missing_required_field(self, api_client):
+        """Тест создания сотрудника без обязательного поля"""
+        data = {
+            "first_name": "Тест",
+            # отсутствует last_name
+            "email": "test@example.com",
+        }
+        response = api_client.post("/api/users/", data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "last_name" in response.data
 
 
 @pytest.mark.django_db
