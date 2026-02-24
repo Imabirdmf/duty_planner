@@ -93,6 +93,8 @@ def user_has_previous_duty(user_id, date):
 def set_minimum_priority():
     print("Set minimum priority")
     users = Staff.objects.filter(priority__gt=0)
+    print(f'set minimum priority: {users}')
+    print(users.aggregate(min_priority=Min("priority")))
     min_priority = users.aggregate(min_priority=Min("priority"))["min_priority"]
     print(f"min_priority: {min_priority}")
     if min_priority is not None:
