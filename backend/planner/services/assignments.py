@@ -22,6 +22,7 @@ def get_duty_assignments(date_start, date_end=None):
 
 
 def make_assignment(duty_date, prev_user=None, new_user=None):
+    print("make_assignment")
     duty = Duty.objects.filter(date=duty_date).first()
     print(duty)
     with transaction.atomic():

@@ -69,13 +69,16 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         serialized_dates = parameters_serializer.validated_data["dates"]
 
         with transaction.atomic():
+            print("Create duty days")
             dates = save_duty_days(serialized_dates)
             start_day = dates[0].date
             end_day = dates.last().date
 
             try:
+                print("Create plan")
                 errors = create_plan(start_day, end_day, people_per_day)
                 set_minimum_priority()
+                print("Get duties")
                 duties = get_assignments(start_day, end_day)
                 serializer = DutyWithAssignmentsSerializer(duties, many=True)
                 data = {"errors": errors, "data": serializer.data}

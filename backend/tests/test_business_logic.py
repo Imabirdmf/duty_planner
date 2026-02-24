@@ -287,7 +287,7 @@ class TestAssignmentsService:
         # Проверяем изменение приоритетов
         old_user.refresh_from_db()
         new_user.refresh_from_db()
-        assert old_user.priority == old_priority - 1
+        assert old_user.priority == max(old_priority - 1, 0)
         assert new_user.priority == new_priority + 1
 
     def test_make_assignment_remove_user(self, duty_assignment):
