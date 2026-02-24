@@ -1,5 +1,4 @@
 from bulk_update_or_create import BulkUpdateOrCreateQuerySet
-from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -8,7 +7,7 @@ class Staff(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    priority = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    priority = models.IntegerField(default=0)
 
     class Meta:
         constraints = [

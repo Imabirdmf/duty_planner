@@ -1,6 +1,7 @@
 import heapq
 from random import shuffle
 
+from django.db import transaction
 from django.db.models import F, Min
 from django.db.models.functions import Greatest
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
@@ -92,13 +93,14 @@ def user_has_previous_duty(user_id, date):
 
 def set_minimum_priority():
     print("Set minimum priority")
-    users = Staff.objects.filter(priority__gt=0)
-    print(f'set minimum priority: {users}')
-    print(users.aggregate(min_priority=Min("priority")))
-    min_priority = users.aggregate(min_priority=Min("priority"))["min_priority"]
-    print(f"min_priority: {min_priority}")
-    if min_priority is not None:
-        users.update(priority=F("priority") - min_priority)
+    with transaction.atomic():
+        users = Staff.objects.filter(priority__gt=0)
+        print(f"set minimum priority: {users}")
+        print(users.aggregate(min_priority=Min("priority")))
+        min_priority = users.aggregate(min_priority=Min("priority"))["min_priority"]
+        print(f"min_priority: {min_priority}")
+        if min_priority is not None:
+            users.update(priority=F("priority") - min_priority)
 
 
 def save_messages(messages, count, duty, people_for_day):
