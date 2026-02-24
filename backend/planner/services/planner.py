@@ -48,8 +48,7 @@ def create_plan(date_start, date_end, people_for_day=2):
             save_messages(messages, count, duty, people_for_day)
 
         for user_priority, user_id in users:
-            update_priority(user_priority, value=user_id)
-            print(f"before update priority: {user_priority, user_id}")
+            update_priority(user_id, value=user_priority)
 
     return messages
 
@@ -97,8 +96,8 @@ def set_minimum_priority():
     print("Set minimum priority")
     with transaction.atomic():
         users = Staff.objects.filter(priority__gt=0)
-        print(f"set minimum priority: {users}")
-        print(users.aggregate(min_priority=Min("priority")))
+        print(f"Users: {users}")
+        print(f"after filtration: {Staff.objects.filter(priority__gt=0)}")
         min_priority = users.aggregate(min_priority=Min("priority"))["min_priority"]
         print(f"min_priority: {min_priority}")
         if min_priority is not None:
