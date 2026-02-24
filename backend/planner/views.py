@@ -1,4 +1,3 @@
-from django.db import transaction
 from django.shortcuts import get_list_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -68,26 +67,25 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         people_per_day = parameters_serializer.validated_data["people_per_day"]
         serialized_dates = parameters_serializer.validated_data["dates"]
 
-        with transaction.atomic():
-            print("Create duty days")
-            dates = save_duty_days(serialized_dates)
-            start_day = dates[0].date
-            end_day = dates.last().date
+        print("Create duty days")
+        dates = save_duty_days(serialized_dates)
+        start_day = dates[0].date
+        end_day = dates.last().date
 
-            try:
-                print("Create plan")
-                errors = create_plan(start_day, end_day, people_per_day)
-                set_minimum_priority()
-                print("Get duties")
-                duties = get_assignments(start_day, end_day)
-                serializer = DutyWithAssignmentsSerializer(duties, many=True)
-                data = {"errors": errors, "data": serializer.data}
-                return Response(data, status=status.HTTP_200_OK)
-            except Exception as e:
-                return Response(
-                    data={"error": "Не удалось сгенерировать расписание: " + str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+        try:
+            print("Create plan")
+            errors = create_plan(start_day, end_day, people_per_day)
+            set_minimum_priority()
+            print("Get duties")
+            duties = get_assignments(start_day, end_day)
+            serializer = DutyWithAssignmentsSerializer(duties, many=True)
+            data = {"errors": errors, "data": serializer.data}
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                data={"error": "Не удалось сгенерировать расписание: " + str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=["post"])
     def assign(self, request):

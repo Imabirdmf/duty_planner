@@ -17,37 +17,39 @@ def create_plan(date_start, date_end, people_for_day=2):
         duty__date__gte=date_start, duty__date__lte=date_end
     )
     print(f"duty_assignments for month: {duty_assignments}")
-    staff = Staff.objects.all()
-    users = [(user.priority, user.id) for user in staff]
-    shuffle(users)
-    heapq.heapify(users)
-    print(f"users before generation: {users}")
-    for duty in duties:
-        print(f"duty day: {duty.date}")
-        count = duty_assignments.filter(duty__id=duty.id).count()
-        print(f"count for day: {count}")
-        added_users = []
-        while users and count < people_for_day:
+    with transaction.atomic():
+        staff = Staff.objects.all()
+        users = [(user.priority, user.id) for user in staff]
+        shuffle(users)
+        heapq.heapify(users)
+        print(f"users before generation: {users}")
+        for duty in duties:
 
-            user_priority, user_id = heapq.heappop(users)
-            print(f"chosen: {user_priority, user_id}")
-            if not user_is_unavailable(user_id, duty.date):
-                create_duty_assignment(user_id, duty)
-                count += 1
-                added_users.append((user_priority + 1, user_id))
-                print(f"added assignment: {user_priority, user_id}")
-            else:
-                added_users.append((user_priority, user_id))
-                print(f"not added assignment: {user_priority, user_id}")
+            print(f"duty day: {duty.date}")
+            count = duty_assignments.filter(duty__id=duty.id).count()
+            print(f"count for day: {count}")
+            added_users = []
+            while users and count < people_for_day:
 
-        for user in added_users:
-            heapq.heappush(users, user)
-        print(f"heap after assignment: {users}")
-        save_messages(messages, count, duty, people_for_day)
+                user_priority, user_id = heapq.heappop(users)
+                print(f"chosen: {user_priority, user_id}")
+                if not user_is_unavailable(user_id, duty.date):
+                    create_duty_assignment(user_id, duty)
+                    count += 1
+                    added_users.append((user_priority + 1, user_id))
+                    print(f"added assignment: {user_priority, user_id}")
+                else:
+                    added_users.append((user_priority, user_id))
+                    print(f"not added assignment: {user_priority, user_id}")
 
-    for user_priority, user_id in users:
-        update_priority(user_priority, value=user_id)
-        print(f"before update priority: {user_priority, user_id}")
+            for user in added_users:
+                heapq.heappush(users, user)
+            print(f"heap after assignment: {users}")
+            save_messages(messages, count, duty, people_for_day)
+
+        for user_priority, user_id in users:
+            update_priority(user_priority, value=user_id)
+            print(f"before update priority: {user_priority, user_id}")
 
     return messages
 
