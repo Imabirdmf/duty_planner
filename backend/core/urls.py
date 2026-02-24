@@ -26,7 +26,7 @@ from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register("users", StaffViewSet, basename="users")
-router.register("days-off", DaysOffViewSet)
+router.register("days-off", DaysOffViewSet, basename="days-off")
 router.register("duties", DutyAssignmentViewSet)
 
 urlpatterns = [

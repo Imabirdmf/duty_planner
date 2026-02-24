@@ -29,17 +29,20 @@ class StaffViewSet(viewsets.ModelViewSet):
 
 
 class DaysOffViewSet(viewsets.ModelViewSet):
-    queryset = DaysOff.objects.all()
     serializer_class = DaysOffSerializer
 
     def get_queryset(self):
+        from planner.services.repositories.days_off_repository import DaysOffRepository
+
+        daysoff_repo = DaysOffRepository()
+
         query_params = self.request.query_params
         start_date = query_params.get("start_date", None)
         end_date = query_params.get("end_date", None)
         if start_date and end_date:
             qs = get_list_or_404(DaysOff, date__gte=start_date, date__lte=end_date)
         else:
-            qs = DaysOff.objects.all()
+            qs = daysoff_repo.get_all()
         return qs
 
 

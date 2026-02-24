@@ -108,8 +108,7 @@ class TestDaysOffViewSet:
 
     def test_list_days_off(self, api_client, days_off_multiple):
         """Тест получения списка выходных"""
-        url = reverse("daysoff-list")
-        response = api_client.get(url)
+        response = response = api_client.get("/api/days-off/")
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(days_off_multiple)
@@ -118,46 +117,42 @@ class TestDaysOffViewSet:
         self, api_client, days_off_multiple, date_range
     ):
         """Тест получения выходных с фильтрацией по датам"""
-        url = reverse("daysoff-list")
         params = {
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
         }
-        response = api_client.get(url, params)
+        response = api_client.get("/api/days-off/", params)
 
         assert response.status_code == status.HTTP_200_OK
 
     def test_create_day_off(self, api_client, staff_user, tomorrow):
         """Тест создания выходного дня"""
-        url = reverse("daysoff-list")
         data = {"user": staff_user.id, "date": tomorrow.isoformat()}
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/days-off/", data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
         assert DaysOff.objects.count() == 1
 
     def test_create_day_off_past_date(self, api_client, staff_user, yesterday):
         """Тест создания выходного на прошедшую дату - должно быть запрещено"""
-        url = reverse("daysoff-list")
+
         data = {"user": staff_user.id, "date": yesterday.isoformat()}
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/days-off/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Нельзя добавить дату из прошлого" in str(response.data)
 
     def test_create_duplicate_day_off(self, api_client, day_off):
         """Тест создания дублирующегося выходного"""
-        url = reverse("daysoff-list")
         data = {"user": day_off.user.id, "date": day_off.date.isoformat()}
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/days-off/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "уже есть выходной" in str(response.data)
 
     def test_delete_day_off(self, api_client, day_off):
         """Тест удаления выходного дня"""
-        url = reverse("daysoff-detail", kwargs={"pk": day_off.id})
-        response = api_client.delete(url)
+        response = api_client.delete(f"/api/days-off/{day_off.id}/")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert DaysOff.objects.count() == 0
