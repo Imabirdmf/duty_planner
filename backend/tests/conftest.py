@@ -8,13 +8,15 @@ from datetime import timedelta
 
 import pytest
 
-backend_dir = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"
-)
-if os.path.exists(backend_dir):
+current_file = os.path.abspath(__file__)
+tests_dir = os.path.dirname(current_file)
+backend_dir = os.path.dirname(tests_dir)
+root_dir = os.path.dirname(backend_dir)
+
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
-else:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.core.local")
 
