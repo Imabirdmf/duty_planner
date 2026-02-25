@@ -11,13 +11,13 @@ class StaffAvailability:
         self.duty_repo = DutyRepository()
         self.duty_assignment_repo = DutyAssignmentRepository()
 
-    def is_unavailable(self, user_id, date):
+    def is_unavailable(self, user_id, date) -> bool:
         return self.has_days_off(user_id, date) or self.has_previous_duty(user_id, date)
 
-    def has_days_off(self, user_id, date):
+    def has_days_off(self, user_id, date) -> bool:
         return self.days_off_repo.exists_for_user_in_date(user_id, date)
 
-    def has_previous_duty(self, user_id, date):
+    def has_previous_duty(self, user_id, date) -> bool:
         duty_id = self.duty_repo.get_previous_duty(date)
         if duty_id is None:
             return False
