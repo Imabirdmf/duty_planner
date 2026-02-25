@@ -1,29 +1,11 @@
 from django.db.models import F, Min
 from django.db.models.functions import Greatest
 from planner.models import Staff
+from planner.services.repositories.base_repository import BaseRepository
 
 
-class StaffRepository:
-
-    def get_all(self):
-        return Staff.objects.all()
-
-    def get_by_id(self, staff_id):
-        return Staff.objects.get(id=staff_id)
-
-    def create(self, **kwargs):
-        return Staff.objects.create(**kwargs)
-
-    def update(self, staff_id, **kwargs):
-        staff = self.get_by_id(staff_id)
-        for key, value in kwargs.items():
-            setattr(staff, key, value)
-        staff.save()
-        return staff
-
-    def delete(self, staff_id):
-        staff = self.get_by_id(staff_id)
-        staff.delete()
+class StaffRepository(BaseRepository[Staff]):
+    model = Staff
 
     def update_priority(self, user_id, value=None, diff=None):
         if value is not None:

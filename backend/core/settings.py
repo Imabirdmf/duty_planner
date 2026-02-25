@@ -10,16 +10,29 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-import logging
 import os
 from pathlib import Path
 
 import dj_database_url
 
-logging.basicConfig(
-    level=logging.INFO,  # минимальный уровень
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django.db.backends": {
+            "level": "DEBUG",
+        }
+    },
+}
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

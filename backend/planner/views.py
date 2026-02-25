@@ -1,10 +1,7 @@
 import logging
 
-from planner.services.repositories.days_off_repository import DaysOffRepository
-from planner.services.repositories.duty_assignment_repository import (
-    DutyAssignmentRepository,
-)
-from planner.services.repositories.staff_repository import StaffRepository
+from django.db import transaction
+from django.db.models import QuerySet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -27,69 +24,76 @@ logger = logging.getLogger(__name__)
 class StaffViewSet(viewsets.ModelViewSet):
     serializer_class = StaffSerializer
 
-    def get_queryset(self):
-        staff_repo = StaffRepository()
-        return staff_repo.get_all()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.assignments = ManageAssignments()
+
+    def get_queryset(self) -> QuerySet:
+        qs = self.assignments.get_all_staff()
+        return qs
 
 
 class DaysOffViewSet(viewsets.ModelViewSet):
     serializer_class = DaysOffSerializer
 
-    def get_queryset(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.assignments = ManageAssignments()
 
-        daysoff_repo = DaysOffRepository()
-
+    def get_queryset(self) -> QuerySet:
         query_params = self.request.query_params
-        start_date = query_params.get("start_date", None)
-        end_date = query_params.get("end_date", None)
-        if start_date and end_date:
-            qs = daysoff_repo.get_list_of_days_off(start_date, end_date)
-        else:
-            qs = daysoff_repo.get_all()
+        query_serializer = DatesQuerySerializer(data=query_params)
+        query_serializer.is_valid(raise_exception=True)
+
+        start_date = query_serializer.validated_data["start_date"] or None
+        end_date = query_serializer.validated_data["end_date"] or None
+        qs = self.assignments.get_days_off(start_date, end_date)
         return qs
 
 
 class DutyAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = DutyAssignmentSerializer
 
-    def get_queryset(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.assignments = ManageAssignments()
 
-        duty_assignment_repo = DutyAssignmentRepository()
-        return duty_assignment_repo.get_all()
+    def get_queryset(self) -> QuerySet:
+        qs = self.assignments.get_all_duty_assignments()
+        return qs
 
     @action(detail=False, methods=["get"])
-    def list_assignments(self, request):
-        assignments = ManageAssignments()
+    def list_assignments(self, request) -> Response:
         query_serializer = DatesQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
 
         start_date = query_serializer.validated_data["start_date"]
         end_date = query_serializer.validated_data["end_date"]
 
-        duties = assignments.get_duties(start_date, end_date)
+        duties = self.assignments.get_duties_by_date(start_date, end_date)
         serializer = DutyWithAssignmentsSerializer(duties, many=True)
         return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
-    def generate(self, request):
+    def generate(self, request) -> Response:
         parameters_serializer = DutyAssignmentGenerateSerializer(data=request.data)
         parameters_serializer.is_valid(raise_exception=True)
 
         people_per_day = parameters_serializer.validated_data["people_per_day"]
         serialized_dates = parameters_serializer.validated_data["dates"]
 
-        assignments = ManageAssignments()
-        dates = assignments.create_duty_days(serialized_dates)
-        start_date, end_date = assignments.get_date_range(dates)
+        dates = self.assignments.create_duty_days(serialized_dates)
+        start_date, end_date = self.assignments.get_date_range(dates)
         plan = Planner(start_date, end_date, people_per_day)
 
         try:
-            errors = plan.create_plan()
-            plan.set_minimum_priority()
-            duties = assignments.get_duties(start_date, end_date)
-            serializer = DutyWithAssignmentsSerializer(duties, many=True)
-            data = {"errors": errors, "data": serializer.data}
-            return Response(data, status=status.HTTP_200_OK)
+            with transaction.atomic():
+                errors = plan.create_plan()
+                plan.set_minimum_priority()
+                duties = self.assignments.get_duties_by_date(start_date, end_date)
+                serializer = DutyWithAssignmentsSerializer(duties, many=True)
+                data = {"errors": errors, "data": serializer.data}
+                return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(
                 data={"error": "Не удалось сгенерировать расписание: " + str(e)},
@@ -110,16 +114,23 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         start_date = query_serializer.validated_data["start_date"]
         end_date = query_serializer.validated_data["end_date"]
 
-        assignments = ManageAssignments()
         try:
-            logger.info("make assignment")
-            assignments.make_assignment(
-                prev_user=prev_user, new_user=new_user, duty_date=date
-            )
-            logger.info("получаем duty")
-            duties = assignments.get_duties(start_date, end_date)
-            serializer = DutyWithAssignmentsSerializer(duties, many=True)
-            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+            with transaction.atomic():
+                logger.info("make assignment")
+                if prev_user and new_user:
+                    self.assignments.update_assignment(
+                        duty_date=date, prev_user_id=prev_user, new_user_id=new_user
+                    )
+                elif prev_user is None and new_user:
+                    self.assignments.create_assignment(duty_date=date, user_id=new_user)
+                elif prev_user and new_user is None:
+                    self.assignments.delete_assignment(
+                        duty_date=date, user_id=prev_user
+                    )
+                logger.info("получаем duty")
+                duties = self.assignments.get_duties_by_date(start_date, end_date)
+                serializer = DutyWithAssignmentsSerializer(duties, many=True)
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(
                 {"error": f"Не удалось переназначить: {str(e)}"},
