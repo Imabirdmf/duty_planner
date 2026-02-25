@@ -1,14 +1,15 @@
 from typing import Generic, Type, TypeVar
 
 from django.db import models
+from typing import Type
 
-T = TypeVar("T", bound=models.Model)
+from django.db.models import QuerySet
 
 
-class BaseRepository(Generic[T]):
+class BaseRepository[T]:
     model: Type[T]
 
-    def get_all(self):
+    def get_all(self) -> QuerySet[T]:
         return self.model.objects.all()
 
     def get_by_id(self, obj_id: int) -> T:
