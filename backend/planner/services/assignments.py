@@ -22,7 +22,7 @@ class ManageAssignments:
         self.days_off_repo = DaysOffRepository()
 
     def get_duties_by_date(
-        self, start_date: datetime.date, end_date: datetime.date = None
+        self, start_date: datetime.date, end_date: datetime.date | None
     ) -> QuerySet[Duty]:
         if end_date is None:
             end_date = start_date
