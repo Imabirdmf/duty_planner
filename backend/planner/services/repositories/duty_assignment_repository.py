@@ -1,4 +1,5 @@
-from planner.models import DutyAssignment
+from django.db.models import QuerySet
+from planner.models import DutyAssignment, Staff
 
 
 class DutyAssignmentRepository:
@@ -6,11 +7,10 @@ class DutyAssignmentRepository:
     def get_all(self):
         return DutyAssignment.objects.all()
 
-    def get_by_id(self, duty_assignment_id):
-        print("пытаюсь получить по id", duty_assignment_id)
+    def get_by_id(self, duty_assignment_id) -> QuerySet:
         return DutyAssignment.objects.get(id=duty_assignment_id)
 
-    def user_has_assignment_for_duty_id(self, user_id, duty_id):
+    def user_has_assignment_for_duty_id(self, user_id, duty_id) -> bool:
         return DutyAssignment.objects.filter(user_id=user_id, duty_id=duty_id).exists()
 
     def get_list_of_duty_assignment(self, start_date, date_end):
@@ -34,10 +34,10 @@ class DutyAssignmentRepository:
             .first()
         )
 
-    def get_first_element_by_date(self, date):
+    def get_first_element_by_date(self, date) -> bool:
         return self.get_list_of_duty_assignment(date, date).first()
 
-    def get_count_by_duty_id(self, duty_id):
+    def get_count_by_duty_id(self, duty_id) -> int:
         return DutyAssignment.objects.filter(duty__id=duty_id).count()
 
     def create(self, **kwargs):
@@ -53,3 +53,9 @@ class DutyAssignmentRepository:
     def delete(self, duty_id, user_id):
         print("пытаюсь удалить")
         self.get_assignment_by_duty_and_user(duty_id, user_id).delete()
+
+    def get_users_for_duty(self, duty_id: int) -> list[Staff]:
+        assignments = DutyAssignment.objects.filter(duty_id=duty_id).select_related(
+            "user"
+        )
+        return [a.user for a in assignments]

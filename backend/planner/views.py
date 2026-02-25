@@ -1,3 +1,10 @@
+import logging
+
+from planner.services.repositories.days_off_repository import DaysOffRepository
+from planner.services.repositories.duty_assignment_repository import (
+    DutyAssignmentRepository,
+)
+from planner.services.repositories.staff_repository import StaffRepository
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,13 +21,13 @@ from .serializers import (
 from .services.assignments import ManageAssignments
 from .services.planner import Planner
 
+logger = logging.getLogger(__name__)
+
 
 class StaffViewSet(viewsets.ModelViewSet):
     serializer_class = StaffSerializer
 
     def get_queryset(self):
-        from planner.services.repositories.staff_repository import StaffRepository
-
         staff_repo = StaffRepository()
         return staff_repo.get_all()
 
@@ -29,7 +36,6 @@ class DaysOffViewSet(viewsets.ModelViewSet):
     serializer_class = DaysOffSerializer
 
     def get_queryset(self):
-        from planner.services.repositories.days_off_repository import DaysOffRepository
 
         daysoff_repo = DaysOffRepository()
 
@@ -47,9 +53,6 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = DutyAssignmentSerializer
 
     def get_queryset(self):
-        from planner.services.repositories.duty_assignment_repository import (
-            DutyAssignmentRepository,
-        )
 
         duty_assignment_repo = DutyAssignmentRepository()
         return duty_assignment_repo.get_all()
@@ -77,8 +80,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
 
         assignments = ManageAssignments()
         dates = assignments.create_duty_days(serialized_dates)
-        start_date = dates[0]
-        end_date = dates[-1]
+        start_date, end_date = assignments.get_date_range(dates)
         plan = Planner(start_date, end_date, people_per_day)
 
         try:
@@ -110,11 +112,11 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
 
         assignments = ManageAssignments()
         try:
-            print("make assignment")
+            logger.info("make assignment")
             assignments.make_assignment(
                 prev_user=prev_user, new_user=new_user, duty_date=date
             )
-            print("получаем duty")
+            logger.info("получаем duty")
             duties = assignments.get_duties(start_date, end_date)
             serializer = DutyWithAssignmentsSerializer(duties, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)

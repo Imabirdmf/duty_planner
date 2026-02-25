@@ -1,9 +1,14 @@
+import datetime
+import logging
+
 from django.db import transaction
 from planner.services.repositories.duty_assignment_repository import (
     DutyAssignmentRepository,
 )
 from planner.services.repositories.duty_repository import DutyRepository
 from planner.services.repositories.staff_repository import StaffRepository
+
+logger = logging.getLogger(__name__)
 
 
 class ManageAssignments:
@@ -28,9 +33,13 @@ class ManageAssignments:
             start_date, end_date
         )
 
+    def get_date_range(
+        self, dates: list[datetime.date]
+    ) -> tuple[datetime.date, datetime.date]:
+        return dates[0], dates[-1]
+
     def make_assignment(self, duty_date, prev_user=None, new_user=None):
         duty = self.duty_repo.get_first_element_for_date(duty_date)
-        print("duty", duty, duty.id)
         with transaction.atomic():
             if prev_user is None and new_user:
                 duty_assignment = self.duty_assignment_repo.create(
@@ -48,8 +57,6 @@ class ManageAssignments:
                 self.staff_repo.update_priority_for_one_by_diff(new_user, diff=1)
                 self.staff_repo.update_priority_for_one_by_diff(prev_user, diff=-1)
             elif prev_user and new_user is None:
-                print("удаляю")
-                print(duty, prev_user)
                 self.delete_assignment(duty.id, prev_user)
                 return self.duty_assignment_repo.get_first_element_by_date(duty_date)
 
