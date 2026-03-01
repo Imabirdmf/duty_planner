@@ -31,7 +31,7 @@ Duty Planner is a full-stack web application designed to automate and manage sta
 - 📈 **Code Quality**: Integrated SonarQube analysis
 
 ## Application Architecture
-
+```bash
 Views (API Endpoints)
     ↓
 Services (Business Logic)
@@ -46,6 +46,7 @@ Repositories (Data Access)
     └── DutyAssignmentRepository
     ↓
 Models (Django ORM)
+```
 
 ## Key Services
 ### Planner Service
