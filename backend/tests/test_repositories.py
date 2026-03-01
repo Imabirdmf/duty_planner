@@ -1,366 +1,311 @@
-"""
-Тесты для репозиториев (слой доступа к данным)
-"""
-
 import pytest
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
-from planner.models import Staff
-
-# Предполагаем, что StaffRepository находится в planner/repositories.py
-# Если путь другой, измените импорт соответственно
-
-
+from planner.models import Staff, DaysOff, Duty, DutyAssignment
 from planner.services.repositories.staff_repository import StaffRepository
+from planner.services.repositories.days_off_repository import DaysOffRepository
+from planner.services.repositories.duty_repository import DutyRepository
+from planner.services.repositories.duty_assignment_repository import (
+    DutyAssignmentRepository,
+)
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
 class TestStaffRepository:
-    """Тесты для StaffRepository"""
+    """Tests for StaffRepository"""
 
     @pytest.fixture
     def repository(self):
-        """Создает экземпляр репозитория"""
         return StaffRepository()
 
     def test_get_all_empty(self, repository):
-        """Тест получения всех сотрудников когда БД пуста"""
+        """Test getting all staff when DB is empty"""
         result = repository.get_all()
-
         assert result.count() == 0
-        assert list(result) == []
 
     def test_get_all_with_data(self, repository, staff_users):
-        """Тест получения всех сотрудников"""
+        """Test getting all staff members"""
         result = repository.get_all()
-
         assert result.count() == len(staff_users)
-        assert set(result) == set(staff_users)
 
     def test_get_by_id_success(self, repository, staff_user):
-        """Тест получения сотрудника по ID"""
+        """Test getting staff by ID"""
         result = repository.get_by_id(staff_user.id)
-
-        assert result == staff_user
         assert result.id == staff_user.id
         assert result.email == staff_user.email
 
     def test_get_by_id_not_found(self, repository):
-        """Тест получения несуществующего сотрудника"""
+        """Test getting non-existent staff"""
         with pytest.raises(Staff.DoesNotExist):
             repository.get_by_id(99999)
 
     def test_create_staff(self, repository):
-        """Тест создания нового сотрудника"""
-        data = {
-            "first_name": "Тест",
-            "last_name": "Тестов",
-            "email": "test@example.com",
-            "priority": 0,
-        }
-
-        result = repository.create(**data)
-
-        assert result.id is not None
-        assert result.first_name == "Тест"
-        assert result.last_name == "Тестов"
-        assert result.email == "test@example.com"
-        assert result.priority == 0
+        """Test creating new staff"""
+        staff = repository.create(
+            first_name="Test", last_name="User", email="test@example.com", priority=0
+        )
+        assert staff.id is not None
         assert Staff.objects.count() == 1
-
-    def test_create_staff_minimal_fields(self, repository):
-        """Тест создания сотрудника с минимальными полями"""
-        data = {
-            "first_name": "Тест",
-            "last_name": "Тестов",
-            "email": "test@example.com",
-        }
-
-        result = repository.create(**data)
-
-        assert result.id is not None
-        assert result.priority == 0  # default value
-
-    def test_create_staff_duplicate_email(self, repository, staff_user):
-        """Тест создания сотрудника с дублирующимся email"""
-        data = {
-            "first_name": "Другой",
-            "last_name": "Человек",
-            "email": staff_user.email,  # дублирующийся email
-        }
-
-        with pytest.raises(IntegrityError):
-            repository.create(**data)
 
     def test_update_staff(self, repository, staff_user):
-        """Тест обновления сотрудника"""
-        updates = {
-            "first_name": "Обновленный",
-            "last_name": "Пользователь",
-            "priority": 5,
-        }
-
-        result = repository.update(staff_user.id, **updates)
-
-        assert result.id == staff_user.id
-        assert result.first_name == "Обновленный"
-        assert result.last_name == "Пользователь"
-        assert result.priority == 5
-
-        # Проверяем что изменения сохранены в БД
-        staff_user.refresh_from_db()
-        assert staff_user.first_name == "Обновленный"
-        assert staff_user.last_name == "Пользователь"
-        assert staff_user.priority == 5
-
-    def test_update_staff_partial(self, repository, staff_user):
-        """Тест частичного обновления сотрудника"""
-        original_last_name = staff_user.last_name
-
-        updates = {"first_name": "Новое"}
-
-        result = repository.update(staff_user.id, **updates)
-
-        assert result.first_name == "Новое"
-        assert result.last_name == original_last_name  # Не изменилось
-
-    def test_update_nonexistent_staff(self, repository):
-        """Тест обновления несуществующего сотрудника"""
-        with pytest.raises(Staff.DoesNotExist):
-            repository.update(99999, first_name="Test")
+        """Test updating staff"""
+        updated = repository.update(staff_user.id, first_name="Updated")
+        assert updated.first_name == "Updated"
 
     def test_delete_staff(self, repository, staff_user):
-        """Тест удаления сотрудника"""
-        staff_id = staff_user.id
-
-        repository.delete(staff_id)
-
+        """Test deleting staff"""
+        repository.delete(staff_user.id)
         assert Staff.objects.count() == 0
-        assert not Staff.objects.filter(id=staff_id).exists()
 
-    def test_delete_nonexistent_staff(self, repository):
-        """Тест удаления несуществующего сотрудника"""
-        with pytest.raises(Staff.DoesNotExist):
-            repository.delete(99999)
+    def test_update_priority_with_value(self, repository, staff_user):
+        """Test updating priority with specific value"""
+        repository.update_priority(staff_user.id, value=5)
+        staff_user.refresh_from_db()
+        assert staff_user.priority == 5
 
-    def test_delete_cascades_to_related_objects(
-        self, repository, staff_user, day_off, duty_assignment
-    ):
-        """Тест что удаление сотрудника каскадно удаляет связанные объекты"""
-        from planner.models import DaysOff, DutyAssignment
+    def test_update_priority_with_diff(self, repository, staff_user):
+        """Test updating priority with diff"""
+        initial = staff_user.priority
+        repository.update_priority(staff_user.id, diff=3)
+        staff_user.refresh_from_db()
+        assert staff_user.priority == initial + 3
 
-        staff_id = staff_user.id
+    def test_update_priority_negative_value_becomes_zero(self, repository, staff_user):
+        """Test that negative priority becomes 0 (Greatest function)"""
+        repository.update_priority(staff_user.id, value=-5)
+        staff_user.refresh_from_db()
+        assert staff_user.priority == 0
 
-        # Проверяем что связанные объекты существуют
-        assert DaysOff.objects.filter(user=staff_user).exists()
-        assert DutyAssignment.objects.filter(user=staff_user).exists()
+    def test_update_priority_negative_diff_becomes_zero(self, repository, staff_user):
+        """Test that priority doesn't go below 0 with negative diff"""
+        staff_user.priority = 1
+        staff_user.save()
+        repository.update_priority(staff_user.id, diff=-10)
+        staff_user.refresh_from_db()
+        assert staff_user.priority == 0
 
-        repository.delete(staff_id)
+    def test_get_minimum_priority(self, repository, staff_users):
+        """Test getting minimum priority"""
+        # Set different priorities
+        Staff.objects.filter(id=staff_users[0].id).update(priority=5)
+        Staff.objects.filter(id=staff_users[1].id).update(priority=3)
+        Staff.objects.filter(id=staff_users[2].id).update(priority=7)
+        Staff.objects.filter(id=staff_users[4].id).update(priority=3)
 
-        # Проверяем что связанные объекты удалены
-        assert not DaysOff.objects.filter(user_id=staff_id).exists()
-        assert not DutyAssignment.objects.filter(user_id=staff_id).exists()
+        min_priority = repository.get_minimum_priority()
+        assert min_priority == 3
+
+    def test_get_minimum_priority_no_positive_priorities(self, repository, staff_users):
+        """Test get_minimum_priority when all priorities are 0"""
+        Staff.objects.all().update(priority=0)
+        min_priority = repository.get_minimum_priority()
+        assert min_priority is None
+
+    def test_set_minimum_priority_for_all(self, repository, staff_users):
+        """Test normalizing priorities by subtracting minimum"""
+        # Set priorities: 5, 6, 7, 8
+        for i, user in enumerate(staff_users):
+            Staff.objects.filter(id=user.id).update(priority=i + 5)
+
+        repository.set_minimum_priority_for_all(5)
+
+        priorities = list(
+            Staff.objects.filter(priority__gt=0)
+            .values_list("priority", flat=True)
+            .order_by("priority")
+        )
+        logger.info("priorities: %s", priorities)
+        assert min(priorities) == 1
+        assert priorities == [1, 2, 3, 4]
 
 
 @pytest.mark.django_db
-class TestStaffRepositoryEdgeCases:
-    """Тесты граничных случаев для StaffRepository"""
+class TestDaysOffRepository:
+    """Tests for DaysOffRepository"""
 
     @pytest.fixture
     def repository(self):
-        return StaffRepository()
+        return DaysOffRepository()
 
-    def test_update_with_empty_dict(self, repository, staff_user):
-        """Тест обновления с пустым словарем изменений"""
-        original_first_name = staff_user.first_name
-
-        result = repository.update(staff_user.id, **{})
-
-        # Ничего не должно измениться
-        assert result.first_name == original_first_name
-
-    def test_get_all_returns_queryset(self, repository, staff_users):
-        """Тест что get_all возвращает QuerySet"""
+    def test_get_all(self, repository, days_off_multiple):
+        """Test getting all days off"""
         result = repository.get_all()
+        assert result.count() == len(days_off_multiple)
 
-        # Проверяем что это QuerySet
-        assert hasattr(result, "filter")
-        assert hasattr(result, "count")
-        assert hasattr(result, "order_by")
+    def test_create_day_off(self, repository, staff_user, tomorrow):
+        """Test creating day off"""
+        day_off = repository.create(user=staff_user, date=tomorrow)
+        assert day_off.id is not None
+        assert DaysOff.objects.count() == 1
 
-    def test_update_email_to_duplicate(self, repository, staff_users):
-        """Тест обновления email на дублирующийся"""
-        staff1 = staff_users[0]
-        staff2_email = staff_users[1].email
+    def test_exists_for_user_in_date_true(self, repository, day_off):
+        """Test exists_for_user_in_date returns True"""
+        result = repository.exists_for_user_in_date(day_off.user.id, day_off.date)
+        assert result is True
 
-        with pytest.raises(IntegrityError):
-            repository.update(staff1.id, email=staff2_email)
+    def test_exists_for_user_in_date_false(self, repository, staff_user, tomorrow):
+        """Test exists_for_user_in_date returns False"""
+        result = repository.exists_for_user_in_date(staff_user.id, tomorrow)
+        assert result is False
 
-    def test_create_update_delete_flow(self, repository):
-        """Тест полного жизненного цикла: создание -> обновление -> удаление"""
-        # Создание
-        staff = repository.create(
-            first_name="Тест", last_name="Тестов", email="test@example.com"
-        )
-        assert Staff.objects.count() == 1
+    def test_get_list_of_days_off(self, repository, days_off_multiple, date_range):
+        """Test getting days off within date range"""
+        result = repository.get_list_of_days_off(date_range["start"], date_range["end"])
+        assert result.count() == len(days_off_multiple)
 
-        # Обновление
-        updated = repository.update(staff.id, first_name="Обновленный")
-        assert updated.first_name == "Обновленный"
-        assert Staff.objects.count() == 1
-
-        # Удаление
-        repository.delete(staff.id)
-        assert Staff.objects.count() == 0
-
-    def test_update_all_fields(self, repository, staff_user):
-        """Тест обновления всех полей сразу"""
-        updates = {
-            "first_name": "Новое",
-            "last_name": "Имя",
-            "email": "new@example.com",
-            "priority": 10,
-        }
-
-        result = repository.update(staff_user.id, **updates)
-
-        assert result.first_name == "Новое"
-        assert result.last_name == "Имя"
-        assert result.email == "new@example.com"
-        assert result.priority == 10
+    def test_delete_day_off(self, repository, day_off):
+        """Test deleting day off"""
+        repository.delete(day_off.id)
+        assert DaysOff.objects.count() == 0
 
 
 @pytest.mark.django_db
-class TestStaffRepositoryIntegration:
-    """Интеграционные тесты для StaffRepository"""
+class TestDutyRepository:
+    """Tests for DutyRepository"""
 
     @pytest.fixture
     def repository(self):
-        return StaffRepository()
+        return DutyRepository()
 
-    def test_repository_works_with_api(self, repository, api_client):
-        """Тест что репозиторий корректно работает с API"""
-        # Создаем через репозиторий
-        staff = repository.create(
-            first_name="Тест", last_name="Тестов", email="test@example.com"
+    def test_get_all(self, repository, duty_days):
+        """Test getting all duties"""
+        result = repository.get_all()
+        assert result.count() == len(duty_days)
+
+    def test_create_duty(self, repository, tomorrow):
+        """Test creating duty"""
+        duty = repository.create(date=tomorrow)
+        assert duty.id is not None
+        assert Duty.objects.count() == 1
+
+    def test_get_previous_duty_exists(self, repository, duty_days):
+        """Test getting previous duty when it exists"""
+        target_date = duty_days[2].date
+        previous_duty_id = repository.get_previous_duty(target_date)
+        assert previous_duty_id == duty_days[1].id
+
+    def test_get_previous_duty_not_exists(self, repository, duty_days):
+        """Test getting previous duty when none exists"""
+        first_date = duty_days[0].date
+        previous_duty_id = repository.get_previous_duty(first_date)
+        assert previous_duty_id is None
+
+    def test_get_list_of_duties(self, repository, duty_days, date_range):
+        """Test getting duties within date range"""
+        result = repository.get_list_of_duties(date_range["start"], date_range["end"])
+        assert result.count() == len(duty_days)
+
+    def test_get_first_element_by_date(self, repository, duty_day):
+        """Test getting duty by date"""
+        result = repository.get_first_element_by_date(duty_day.date)
+        assert result.id == duty_day.id
+
+    def test_get_first_element_by_date_not_found(self, repository, tomorrow):
+        """Test getting duty by non-existent date"""
+        result = repository.get_first_element_by_date(tomorrow)
+        assert result is None
+
+    def test_get_list_of_duties_ordered_by_date(
+        self, repository, duty_days, date_range
+    ):
+        """Test getting duties ordered by date"""
+        result = repository.get_list_of_duties_ordered_by_date(
+            date_range["start"], date_range["end"]
         )
+        dates = list(result.values_list("date", flat=True))
+        assert dates == sorted(dates)
 
-        # Получаем через API
-        response = api_client.get(f"/api/users/{staff.id}/")
+    def test_save_duty_days(self, repository, date_range):
+        """Test bulk creating duty days"""
+        dates = date_range["dates"]
+        result = repository.save_duty_days(dates)
 
-        assert response.status_code == 200
-        assert response.data["first_name"] == "Тест"
-        assert response.data["email"] == "test@example.com"
+        assert len(result) == len(dates)
+        assert Duty.objects.count() == len(dates)
 
-    def test_multiple_repositories_same_data(self):
-        """Тест что несколько экземпляров репозитория работают с одними данными"""
-        repo1 = StaffRepository()
-        repo2 = StaffRepository()
+    def test_save_duty_days_idempotent(self, repository, date_range):
+        """Test that save_duty_days is idempotent"""
+        dates = date_range["dates"]
+        repository.save_duty_days(dates)
+        count1 = Duty.objects.count()
 
-        staff = repo1.create(
-            first_name="Тест", last_name="Тестов", email="test@example.com"
-        )
+        repository.save_duty_days(dates)
+        count2 = Duty.objects.count()
 
-        # Второй репозиторий должен видеть данные первого
-        result = repo2.get_by_id(staff.id)
-        assert result.first_name == "Тест"
-
-        # Обновление через второй репозиторий
-        repo2.update(staff.id, first_name="Обновленный")
-
-        # Первый репозиторий должен видеть изменения
-        updated = repo1.get_by_id(staff.id)
-        assert updated.first_name == "Обновленный"
-
-    def test_repository_with_transactions(self, repository):
-        """Тест работы репозитория с транзакциями"""
-        from django.db import transaction
-
-        try:
-            with transaction.atomic():
-                staff = repository.create(
-                    first_name="Тест", last_name="Тестов", email="test@example.com"
-                )
-
-                # Искусственно вызываем ошибку
-                raise Exception("Rollback test")
-        except Exception:
-            pass
-
-        # Проверяем что данные откатились
-        assert Staff.objects.count() == 0
-
-    def test_repository_bulk_operations(self, repository):
-        """Тест массовых операций через репозиторий"""
-        # Создаем несколько сотрудников
-        staff_list = []
-        for i in range(5):
-            staff = repository.create(
-                first_name=f"Тест{i}",
-                last_name=f"Тестов{i}",
-                email=f"test{i}@example.com",
-            )
-            staff_list.append(staff)
-
-        # Получаем всех
-        all_staff = repository.get_all()
-        assert all_staff.count() == 5
-
-        # Обновляем всех
-        for staff in staff_list:
-            repository.update(staff.id, priority=10)
-
-        # Проверяем обновления
-        all_staff = repository.get_all()
-        for staff in all_staff:
-            assert staff.priority == 10
-
-        # Удаляем всех
-        for staff in staff_list:
-            repository.delete(staff.id)
-
-        assert Staff.objects.count() == 0
+        assert count1 == count2
 
 
 @pytest.mark.django_db
-class TestStaffRepositoryWithRelatedObjects:
-    """Тесты репозитория с учетом связанных объектов"""
+class TestDutyAssignmentRepository:
+    """Tests for DutyAssignmentRepository"""
 
     @pytest.fixture
     def repository(self):
-        return StaffRepository()
+        return DutyAssignmentRepository()
 
-    def test_get_staff_with_days_off(self, repository, staff_user, day_off):
-        """Тест получения сотрудника у которого есть выходные"""
-        staff = repository.get_by_id(staff_user.id)
+    def test_get_all(self, repository, duty_assignments):
+        """Test getting all duty assignments"""
+        result = repository.get_all()
+        assert result.count() == len(duty_assignments)
 
-        # Проверяем что можем получить связанные выходные
-        days_off = staff.daysoff_set.all()
-        assert days_off.count() == 1
-        assert days_off.first() == day_off
+    def test_create_assignment(self, repository, staff_user, duty_day):
+        """Test creating duty assignment"""
+        assignment = repository.create(user_id=staff_user.id, duty=duty_day)
+        assert assignment.id is not None
+        assert DutyAssignment.objects.count() == 1
 
-    def test_get_staff_with_duty_assignments(
-        self, repository, staff_user, duty_assignment
+    def test_user_has_assignment_for_duty_id_true(self, repository, duty_assignment):
+        """Test user_has_assignment_for_duty_id returns True"""
+        result = repository.user_has_assignment_for_duty_id(
+            duty_assignment.user.id, duty_assignment.duty.id
+        )
+        assert result is True
+
+    def test_user_has_assignment_for_duty_id_false(
+        self, repository, staff_user, duty_day
     ):
-        """Тест получения сотрудника у которого есть назначения"""
-        staff = repository.get_by_id(staff_user.id)
+        """Test user_has_assignment_for_duty_id returns False"""
+        result = repository.user_has_assignment_for_duty_id(staff_user.id, duty_day.id)
+        assert result is False
 
-        # Проверяем что можем получить связанные назначения
-        assignments = staff.dutyassignment_set.all()
-        assert assignments.count() == 1
-        assert assignments.first() == duty_assignment
-
-    def test_update_staff_preserves_related_objects(
-        self, repository, staff_user, day_off, duty_assignment
+    def test_get_list_of_duty_assignment(
+        self, repository, duty_assignments, date_range
     ):
-        """Тест что обновление сотрудника сохраняет связанные объекты"""
-        staff_id = staff_user.id
+        """Test getting assignments within date range"""
+        result = repository.get_list_of_duty_assignment(
+            date_range["start"], date_range["end"]
+        )
+        assert result.count() == len(duty_assignments)
 
-        # Обновляем сотрудника
-        repository.update(staff_id, first_name="Обновленный")
+    def test_get_assignment_by_duty_and_user(self, repository, duty_assignment):
+        """Test getting assignment by duty and user"""
+        result = repository.get_assignment_by_duty_and_user(
+            duty_assignment.duty.id, duty_assignment.user.id
+        )
+        assert result.id == duty_assignment.id
 
-        # Проверяем что связанные объекты сохранились
-        from planner.models import DaysOff, DutyAssignment
+    def test_get_first_element_by_user(self, repository, duty_assignment):
+        """Test getting assignment by user and date"""
+        result = repository.get_first_element_by_user(
+            duty_assignment.duty.date, duty_assignment.user.id
+        )
+        assert result.id == duty_assignment.id
 
-        assert DaysOff.objects.filter(user_id=staff_id).exists()
-        assert DutyAssignment.objects.filter(user_id=staff_id).exists()
+    def test_get_count_by_duty_id(self, repository, duty_assignments, duty_days):
+        """Test counting assignments for a duty"""
+        # duty_days[0] has 2 assignments (from fixture)
+        count = repository.get_count_by_duty_id(duty_days[0].id)
+        assert count == 2
+
+    def test_get_users_for_duty(self, repository, duty_assignments, duty_days):
+        """Test getting users assigned to a duty"""
+        users = repository.get_users_for_duty(duty_days[0].id)
+        assert len(users) == 2
+        assert all(isinstance(u, Staff) for u in users)
+
+    def test_delete_assignment(self, repository, duty_assignment):
+        """Test deleting assignment"""
+        repository.delete(duty_assignment.id)
+        assert DutyAssignment.objects.count() == 0

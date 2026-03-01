@@ -20,7 +20,7 @@ class Planner:
         self.days_off_repo = DaysOffRepository()
         self.duty_repo = DutyRepository()
         self.messages = {}
-        self.people_for_day = people_for_day
+        self.people_for_day: int = people_for_day
         self.start_date = start_date
         self.end_date = end_date
 
@@ -57,7 +57,7 @@ class Planner:
         logger.info("duties for month: %s", duties_for_month)
         staff_availability = StaffAvailability()
 
-        with transaction.atomic():
+        with transaction.atomic():  # убрать
             staff = self.staff_repo.get_all()
             users = [(user.priority, user.id) for user in staff]
             shuffle(users)

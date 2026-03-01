@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import QuerySet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .serializers import (
@@ -41,13 +42,24 @@ class DaysOffViewSet(viewsets.ModelViewSet):
         self.assignments = ManageAssignments()
 
     def get_queryset(self) -> QuerySet:
-        query_params = self.request.query_params
-        query_serializer = DatesQuerySerializer(data=query_params)
-        query_serializer.is_valid(raise_exception=True)
+        return self.assignments.get_all_days_off()
 
-        start_date = query_serializer.validated_data["start_date"] or None
-        end_date = query_serializer.validated_data["end_date"] or None
-        qs = self.assignments.get_days_off(start_date, end_date)
+    def filter_queryset(self, queryset: QuerySet) -> QuerySet:
+        start_date_str = self.request.query_params.get("start_date")
+        end_date_str = self.request.query_params.get("end_date")
+        if start_date_str and end_date_str:
+            serializer = DatesQuerySerializer(data=self.request.query_params)
+            if not serializer.is_valid():
+                raise ValidationError(serializer.errors)
+
+            start_date = serializer.validated_data.get("start_date")
+            end_date = serializer.validated_data.get("end_date")
+
+            if start_date and end_date:
+                qs = queryset.filter(date__gte=start_date, date__lte=end_date)
+                logger.debug(f"Filtered days off: {start_date} to {end_date}")
+        else:
+            qs = queryset
         return qs
 
 
@@ -117,16 +129,7 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 logger.info("make assignment")
-                if prev_user and new_user:
-                    self.assignments.update_assignment(
-                        duty_date=date, prev_user_id=prev_user, new_user_id=new_user
-                    )
-                elif prev_user is None and new_user:
-                    self.assignments.create_assignment(duty_date=date, user_id=new_user)
-                elif prev_user and new_user is None:
-                    self.assignments.delete_assignment(
-                        duty_date=date, user_id=prev_user
-                    )
+                self.assignments.make_assignment(date, prev_user, new_user)
                 logger.info("получаем duty")
                 duties = self.assignments.get_duties_by_date(start_date, end_date)
                 serializer = DutyWithAssignmentsSerializer(duties, many=True)

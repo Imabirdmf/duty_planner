@@ -1,7 +1,11 @@
+import logging
+
 from django.db.models import F, Min
 from django.db.models.functions import Greatest
 from planner.models import Staff
 from planner.services.repositories.base_repository import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class StaffRepository(BaseRepository[Staff]):
@@ -22,4 +26,11 @@ class StaffRepository(BaseRepository[Staff]):
 
     def set_minimum_priority_for_all(self, min_priority: int):
         users = Staff.objects.filter(priority__gt=0)
+        logger.info(
+            "пользователи после фильтрации: %s", [(u.priority, u.id) for u in users]
+        )
+        logger.info("min_priority: %s", min_priority)
         users.update(priority=F("priority") - min_priority)
+        logger.info(
+            "пользователи после апдейта: %s", [(u.priority, u.id) for u in users]
+        )

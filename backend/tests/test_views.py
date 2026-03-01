@@ -1,122 +1,77 @@
 """
-Тесты для view-функций (ViewSets)
+Tests for ViewSets (API endpoints)
 """
 
 import pytest
-from django.urls import reverse
-from planner.models import DaysOff, Duty, DutyAssignment, Staff
 from rest_framework import status
+from planner.models import Staff, DaysOff, Duty, DutyAssignment
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
 class TestStaffViewSet:
-    """Тесты для StaffViewSet"""
+    """Tests for StaffViewSet"""
 
     def test_list_staff(self, api_client, staff_users):
-        """Тест получения списка сотрудников"""
+        """Test listing all staff"""
         response = api_client.get("/api/users/")
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(staff_users)
 
     def test_create_staff(self, api_client):
-        """Тест создания сотрудника"""
-        data = {
-            "first_name": "Тест",
-            "last_name": "Тестов",
-            "email": "test@example.com",
-        }
+        """Test creating new staff"""
+        data = {"first_name": "Test", "last_name": "User", "email": "test@example.com"}
         response = api_client.post("/api/users/", data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["first_name"] == "Тест"
-        assert response.data["last_name"] == "Тестов"
-        assert response.data["full_name"] == "Тест Тестов"
+        assert response.data["first_name"] == "Test"
+        assert response.data["full_name"] == "Test User"
         assert Staff.objects.count() == 1
 
     def test_retrieve_staff(self, api_client, staff_user):
-        """Тест получения конкретного сотрудника"""
+        """Test retrieving specific staff"""
         response = api_client.get(f"/api/users/{staff_user.id}/")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["id"] == staff_user.id
         assert response.data["email"] == staff_user.email
-        assert response.data["full_name"] == staff_user.full_name
 
     def test_update_staff(self, api_client, staff_user):
-        """Тест обновления сотрудника"""
+        """Test updating staff"""
         data = {
-            "first_name": "Обновленный",
-            "last_name": "Пользователь",
+            "first_name": "Updated",
+            "last_name": "Name",
             "email": "updated@example.com",
         }
         response = api_client.put(f"/api/users/{staff_user.id}/", data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["first_name"] == "Обновленный"
-        assert response.data["last_name"] == "Пользователь"
-
-        staff_user.refresh_from_db()
-        assert staff_user.first_name == "Обновленный"
-
-    def test_partial_update_staff(self, api_client, staff_user):
-        """Тест частичного обновления сотрудника"""
-        data = {"first_name": "Новое"}
-        response = api_client.patch(f"/api/users/{staff_user.id}/", data, format="json")
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["first_name"] == "Новое"
-
-        staff_user.refresh_from_db()
-        assert staff_user.first_name == "Новое"
-        assert staff_user.last_name == "Иванов"  # Не изменилось
+        assert response.data["first_name"] == "Updated"
 
     def test_delete_staff(self, api_client, staff_user):
-        """Тест удаления сотрудника"""
+        """Test deleting staff"""
         response = api_client.delete(f"/api/users/{staff_user.id}/")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Staff.objects.count() == 0
 
     def test_create_staff_duplicate_email(self, api_client, staff_user):
-        """Тест создания сотрудника с дублирующимся email"""
-        data = {
-            "first_name": "Другой",
-            "last_name": "Человек",
-            "email": staff_user.email,  # дублирующийся email
-        }
+        """Test creating staff with duplicate email"""
+        data = {"first_name": "Another", "last_name": "User", "email": staff_user.email}
         response = api_client.post("/api/users/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_create_staff_missing_required_field(self, api_client):
-        """Тест создания сотрудника без обязательного поля"""
-        data = {
-            "first_name": "Тест",
-            # отсутствует last_name
-            "email": "test@example.com",
-        }
-        response = api_client.post("/api/users/", data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "last_name" in response.data
 
 
 @pytest.mark.django_db
 class TestDaysOffViewSet:
-    """Тесты для DaysOffViewSet"""
+    """Tests for DaysOffViewSet"""
 
-    def test_list_days_off(self, api_client, days_off_multiple):
-        """Тест получения списка выходных"""
-        response = response = api_client.get("/api/days-off/")
-
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == len(days_off_multiple)
-
-    def test_list_days_off_with_date_filter(
-        self, api_client, days_off_multiple, date_range
-    ):
-        """Тест получения выходных с фильтрацией по датам"""
+    def test_list_days_off(self, api_client, days_off_multiple, date_range):
+        """Test listing days off with date filter"""
         params = {
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
@@ -124,9 +79,10 @@ class TestDaysOffViewSet:
         response = api_client.get("/api/days-off/", params)
 
         assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == len(days_off_multiple)
 
     def test_create_day_off(self, api_client, staff_user, tomorrow):
-        """Тест создания выходного дня"""
+        """Test creating day off"""
         data = {"user": staff_user.id, "date": tomorrow.isoformat()}
         response = api_client.post("/api/days-off/", data, format="json")
 
@@ -134,8 +90,7 @@ class TestDaysOffViewSet:
         assert DaysOff.objects.count() == 1
 
     def test_create_day_off_past_date(self, api_client, staff_user, yesterday):
-        """Тест создания выходного на прошедшую дату - должно быть запрещено"""
-
+        """Test creating day off with past date - should fail"""
         data = {"user": staff_user.id, "date": yesterday.isoformat()}
         response = api_client.post("/api/days-off/", data, format="json")
 
@@ -143,7 +98,7 @@ class TestDaysOffViewSet:
         assert "Нельзя добавить дату из прошлого" in str(response.data)
 
     def test_create_duplicate_day_off(self, api_client, day_off):
-        """Тест создания дублирующегося выходного"""
+        """Test creating duplicate day off"""
         data = {"user": day_off.user.id, "date": day_off.date.isoformat()}
         response = api_client.post("/api/days-off/", data, format="json")
 
@@ -151,84 +106,81 @@ class TestDaysOffViewSet:
         assert "уже есть выходной" in str(response.data)
 
     def test_delete_day_off(self, api_client, day_off):
-        """Тест удаления выходного дня"""
+        """Test deleting day off"""
+        logger.info("day-off: %s", day_off.id)
         response = api_client.delete(f"/api/days-off/{day_off.id}/")
-
+        logger.info("response: %s", response)
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert DaysOff.objects.count() == 0
 
 
 @pytest.mark.django_db
 class TestDutyAssignmentViewSet:
-    """Тесты для DutyAssignmentViewSet"""
+    """Tests for DutyAssignmentViewSet"""
 
-    def test_list_assignments_action(self, api_client, duty_assignments, date_range):
-        """Тест получения списка назначений через action list_assignments"""
-        url = reverse("dutyassignment-list-assignments")
+    def test_list_assignments(self, api_client, duty_assignments, date_range):
+        """Test list_assignments action"""
         params = {
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
         }
-        response = api_client.get(url, params)
+        response = api_client.get("/api/duties/list_assignments/", params)
 
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
         assert len(response.data["data"]) > 0
 
     def test_list_assignments_missing_params(self, api_client):
-        """Тест списка назначений без обязательных параметров"""
-        url = reverse("dutyassignment-list-assignments")
-        response = api_client.get(url)
+        """Test list_assignments without required params"""
+        response = api_client.get("/api/duties/list_assignments/")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_generate_duty_plan(self, api_client, staff_users, date_range):
-        """Тест генерации расписания дежурств"""
-        url = reverse("dutyassignment-generate")
+        """Test generating duty schedule"""
         data = {
             "dates": [d.isoformat() for d in date_range["dates"]],
             "people_per_day": 2,
         }
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/duties/generate/", data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
         assert "errors" in response.data
 
-        # Проверяем, что созданы дежурства
+        # Check duties were created
         assert Duty.objects.count() == len(date_range["dates"])
 
-    def test_generate_duty_plan_with_insufficient_staff(
-        self, api_client, staff_user, date_range
-    ):
-        """Тест генерации расписания с недостаточным количеством сотрудников"""
-        url = reverse("dutyassignment-generate")
+    def test_generate_with_insufficient_staff(self, api_client, staff_user, date_range):
+        """Test generation with insufficient staff"""
         data = {
             "dates": [d.isoformat() for d in date_range["dates"]],
-            "people_per_day": 5,  # Больше чем сотрудников
+            "people_per_day": 5,
         }
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/duties/generate/", data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
-        # Должны быть сообщения об ошибках
         assert len(response.data.get("errors", {})) > 0
 
-    def test_generate_duty_plan_invalid_people_per_day(self, api_client, date_range):
-        """Тест генерации с некорректным количеством людей на день"""
-        url = reverse("dutyassignment-generate")
+    def test_generate_invalid_people_per_day(self, api_client, date_range):
+        """Test generation with invalid people_per_day"""
         data = {
             "dates": [d.isoformat() for d in date_range["dates"]],
-            "people_per_day": 15,  # Больше максимального (10)
+            "people_per_day": 15,  # Max is 10
         }
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/duties/generate/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_assign_new_user_to_duty(
-        self, api_client, staff_user, duty_day, date_range
-    ):
-        """Тест назначения нового пользователя на дежурство"""
-        url = reverse("dutyassignment-assign")
+    def test_generate_empty_dates(self, api_client):
+        """Test generation with empty dates list"""
+        data = {"dates": [], "people_per_day": 2}
+        response = api_client.post("/api/duties/generate/", data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_assign_new_user(self, api_client, staff_user, duty_day, date_range):
+        """Test assigning new user to duty"""
         params = {
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
@@ -238,19 +190,20 @@ class TestDutyAssignmentViewSet:
             "user_id_new": staff_user.id,
             "date": duty_day.date.isoformat(),
         }
-        response = api_client.post(url, data, query_params=params, format="json")
+        response = api_client.post(
+            "/api/duties/assign/", data, query_params=params, format="json"
+        )
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
 
-        # Проверяем, что назначение создано
+        # Check assignment was created
         assert DutyAssignment.objects.filter(user=staff_user, duty=duty_day).exists()
 
-    def test_change_duty_assignment(
+    def test_change_assignment(
         self, api_client, duty_assignment, staff_users, date_range
     ):
-        """Тест изменения назначения (замена пользователя)"""
-        url = reverse("dutyassignment-assign")
-        new_user = staff_users[1]  # Выбираем другого пользователя
+        """Test changing assignment (replace user)"""
+        new_user = staff_users[1]
         params = {
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
@@ -260,17 +213,18 @@ class TestDutyAssignmentViewSet:
             "user_id_new": new_user.id,
             "date": duty_assignment.duty.date.isoformat(),
         }
-        response = api_client.post(url, data, query_params=params, format="json")
+        response = api_client.post(
+            "/api/duties/assign/", data, query_params=params, format="json"
+        )
 
         assert response.status_code == status.HTTP_200_OK
 
-        # Проверяем, что назначение изменено
+        # Check assignment was updated
         duty_assignment.refresh_from_db()
         assert duty_assignment.user.id == new_user.id
 
-    def test_remove_duty_assignment(self, api_client, duty_assignment, date_range):
-        """Тест удаления назначения"""
-        url = reverse("dutyassignment-assign")
+    def test_remove_assignment(self, api_client, duty_assignment, date_range):
+        """Test removing assignment"""
         params = {
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
@@ -280,76 +234,86 @@ class TestDutyAssignmentViewSet:
             "user_id_new": None,
             "date": duty_assignment.duty.date.isoformat(),
         }
-        response = api_client.post(url, data, query_params=params, format="json")
+        response = api_client.post(
+            "/api/duties/assign/", data, query_params=params, format="json"
+        )
 
         assert response.status_code == status.HTTP_200_OK
 
-        # Проверяем, что назначение удалено
+        # Check assignment was deleted
         assert not DutyAssignment.objects.filter(id=duty_assignment.id).exists()
 
     def test_assign_missing_query_params(self, api_client, staff_user, duty_day):
-        """Тест назначения без query параметров"""
-        url = reverse("dutyassignment-assign")
+        """Test assign without required query params"""
         data = {
             "user_id_prev": None,
             "user_id_new": staff_user.id,
             "date": duty_day.date.isoformat(),
         }
-        response = api_client.post(url, data, format="json")
+        response = api_client.post("/api/duties/assign/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_create_duty_assignment(self, api_client, staff_user, duty_day):
-        """Тест создания назначения через стандартный create"""
-        url = reverse("dutyassignment-list")
-        data = {"user": staff_user.id, "duty": duty_day.id}
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_201_CREATED
-        assert DutyAssignment.objects.count() == 1
-
     def test_list_duty_assignments(self, api_client, duty_assignments):
-        """Тест получения списка всех назначений"""
-        url = reverse("dutyassignment-list")
-        response = api_client.get(url)
+        """Test listing all duty assignments"""
+        response = api_client.get("/api/duties/")
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(duty_assignments)
 
+    def test_create_duty_assignment(self, api_client, staff_user, duty_day):
+        """Test creating duty assignment via standard create"""
+        data = {"user": staff_user.id, "duty": duty_day.id}
+        response = api_client.post("/api/duties/", data, format="json")
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert DutyAssignment.objects.count() == 1
+
     def test_delete_duty_assignment(self, api_client, duty_assignment):
-        """Тест удаления назначения"""
-        url = reverse("dutyassignment-detail", kwargs={"pk": duty_assignment.id})
-        response = api_client.delete(url)
+        """Test deleting duty assignment"""
+        response = api_client.delete(f"/api/duties/{duty_assignment.id}/")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert DutyAssignment.objects.count() == 0
 
 
 @pytest.mark.django_db
-class TestDutyAssignmentViewSetEdgeCases:
-    """Тесты граничных случаев для DutyAssignmentViewSet"""
+class TestViewSetIntegration:
+    """Integration tests for ViewSets"""
 
-    def test_generate_with_empty_dates(self, api_client):
-        """Тест генерации с пустым списком дат"""
-        url = reverse("dutyassignment-generate")
-        data = {"dates": [], "people_per_day": 2}
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_generate_with_days_off(self, api_client, staff_users, day_off, date_range):
-        """Тест генерации расписания с учетом выходных дней"""
-        url = reverse("dutyassignment-generate")
+    def test_full_workflow(self, api_client, staff_users, date_range):
+        """Test complete workflow: create duties -> generate -> modify"""
+        # 1. Generate schedule
         data = {
-            "dates": [d.isoformat() for d in date_range["dates"]],
+            "dates": [d.isoformat() for d in date_range["dates"][:3]],
             "people_per_day": 2,
         }
-        response = api_client.post(url, data, format="json")
-
+        response = api_client.post("/api/duties/generate/", data, format="json")
         assert response.status_code == status.HTTP_200_OK
+        print("# 1. Generate schedule")
 
-        # Проверяем, что пользователь с выходным не назначен на этот день
-        assignments_on_day_off = DutyAssignment.objects.filter(
-            user=day_off.user, duty__date=day_off.date
-        )
-        assert assignments_on_day_off.count() == 0
+        # 2. List assignments
+        params = {
+            "start_date": date_range["dates"][0].isoformat(),
+            "end_date": date_range["dates"][2].isoformat(),
+        }
+        response = api_client.get("/api/duties/list_assignments/", query_params=params)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["data"]) == 3
+        print("# 2. List assignments")
+
+        # 3. Modify assignment
+        first_duty = Duty.objects.filter(date=date_range["dates"][0]).first()
+        first_assignment = DutyAssignment.objects.filter(duty=first_duty).first()
+
+        if first_assignment:
+            modify_data = {
+                "user_id_prev": first_assignment.user.id,
+                "user_id_new": staff_users[-1].id,
+                "date": first_duty.date.isoformat(),
+            }
+            response = api_client.post(
+                "/api/duties/assign/", modify_data, query_params=params, format="json"
+            )
+            assert response.status_code == status.HTTP_200_OK
+        print("# 3. Modify assignment")

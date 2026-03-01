@@ -4,6 +4,12 @@ from django.db import models
 class BaseRepository[T: models.Model]:
     model: type[T]
 
+    def __init__(self):
+        if self.model is None:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} must set 'model' attribute"
+            )
+
     def get_all(self):
         return self.model.objects.all()
 

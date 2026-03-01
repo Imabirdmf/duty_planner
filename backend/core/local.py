@@ -29,11 +29,11 @@ LOGGING = {
         "handlers": ["console"],
         "level": "INFO",
     },
-    "loggers": {
-        "django.db.backends": {
-            "level": "DEBUG",
-        }
-    },
+    # "loggers": {
+    #     "django.db.backends": {
+    #         "level": "DEBUG",
+    #     }
+    # },
 }
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

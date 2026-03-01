@@ -63,6 +63,9 @@ class ManageAssignments:
     def get_all_duties(self):
         return self.duty_repo.get_all()
 
+    def get_all_days_off(self):
+        return self.days_off_repo.get_all()
+
     def create_assignment(self, duty_date, user_id: int) -> DutyAssignment:
         with transaction.atomic():
             duty = self.duty_repo.get_first_element_by_date(duty_date)
@@ -91,3 +94,13 @@ class ManageAssignments:
                 duty_date, user_id
             )
             self.duty_assignment_repo.delete(duty_assignment.id)
+
+    def make_assignment(
+        self, duty_date, prev_user_id: int | None, new_user_id: int | None
+    ):
+        if prev_user_id and new_user_id:
+            self.update_assignment(duty_date, prev_user_id, new_user_id)
+        elif prev_user_id is None and new_user_id:
+            self.create_assignment(duty_date, user_id=new_user_id)
+        elif prev_user_id and new_user_id is None:
+            self.delete_assignment(duty_date, user_id=prev_user_id)
