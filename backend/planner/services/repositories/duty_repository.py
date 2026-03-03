@@ -1,6 +1,5 @@
 import datetime
 
-from django.db.models import QuerySet
 from planner.models import Duty
 from planner.services.repositories.base_repository import BaseRepository
 
@@ -16,22 +15,15 @@ class DutyRepository(BaseRepository[Duty]):
             .last()
         )
 
-    def get_list_of_duties(
-        self, start_date: datetime.date, end_date: datetime.date
-    ) -> QuerySet[Duty]:
-        return Duty.objects.filter(
-            date__gte=start_date, date__lte=end_date
-        ).prefetch_related("dutyassignment_set__user")
-
     def get_first_element_by_date(self, duty_date) -> Duty:
         return Duty.objects.filter(date=duty_date).first()
 
-    def get_list_of_duties_ordered_by_date(
-        self, date_start, date_end
-    ) -> QuerySet[Duty]:
-        return Duty.objects.filter(date__gte=date_start, date__lte=date_end).order_by(
-            "date"
-        )
+    def get_list_of_duties(self, start_date, end_date, ordered: bool = False):
+        qs = Duty.objects.filter(
+            date__gte=start_date, date__lte=end_date
+        ).prefetch_related("dutyassignment_set__user")
+
+        return qs.order_by("date") if ordered else qs
 
     def save_duty_days(self, dates: list[datetime.date,]) -> list[datetime.date,]:
         Duty.objects.bulk_update_or_create(
@@ -39,7 +31,7 @@ class DutyRepository(BaseRepository[Duty]):
             update_fields=["date"],
             match_field=["date"],
         )
-        data = self.get_list_of_duties_ordered_by_date(
-            date_start=dates[0], date_end=dates[-1]
+        data = self.get_list_of_duties(
+            start_date=dates[0], end_date=dates[-1], ordered=True
         )
         return [d.date for d in data]

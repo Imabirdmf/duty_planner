@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class StaffRepository(BaseRepository[Staff]):
     model = Staff
+    default_ordering = "email"
 
     def update_priority(self, user_id, value=None, diff=None):
         if value is not None:

@@ -21,11 +21,15 @@ class ManageAssignments:
         self.staff_repo = StaffRepository()
         self.days_off_repo = DaysOffRepository()
 
-    def get_duties_by_date(
+    def _resolve_date_range(
         self, start_date: datetime.date, end_date: datetime.date | None
+    ) -> tuple[datetime.date, datetime.date]:
+        return start_date, end_date if end_date is not None else start_date
+
+    def get_duties_by_date(
+        self, start_date: datetime.date, end_date: datetime.date | None = None
     ) -> QuerySet[Duty]:
-        if end_date is None:
-            end_date = start_date
+        start_date, end_date = self._resolve_date_range(start_date, end_date)
         return self.duty_repo.get_list_of_duties(start_date, end_date)
 
     def create_duty_days(self, dates: list[datetime.date]):
@@ -33,10 +37,9 @@ class ManageAssignments:
         return self.duty_repo.save_duty_days(sorted_dates)
 
     def get_duty_assignments(
-        self, start_date, end_date=None
+        self, start_date: datetime.date, end_date: datetime.date | None = None
     ) -> QuerySet[DutyAssignment]:
-        if end_date is None:
-            end_date = start_date
+        start_date, end_date = self._resolve_date_range(start_date, end_date)
         return self.duty_assignment_repo.get_list_of_duty_assignment(
             start_date, end_date
         )

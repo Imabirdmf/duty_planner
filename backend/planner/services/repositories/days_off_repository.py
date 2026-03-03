@@ -5,9 +5,7 @@ from planner.services.repositories.base_repository import BaseRepository
 
 class DaysOffRepository(BaseRepository[DaysOff]):
     model = DaysOff
-
-    def get_all(self):
-        return self.model.objects.all().order_by("date")
+    default_ordering = "date"
 
     def exists_for_user_in_date(self, user_id, date) -> bool:
         return DaysOff.objects.filter(user_id=user_id, date=date).exists()

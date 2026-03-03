@@ -211,8 +211,8 @@ class TestDutyRepository:
         self, repository, duty_days, date_range
     ):
         """Test getting duties ordered by date"""
-        result = repository.get_list_of_duties_ordered_by_date(
-            date_range["start"], date_range["end"]
+        result = repository.get_list_of_duties(
+            date_range["start"], date_range["end"], ordered=True
         )
         dates = list(result.values_list("date", flat=True))
         assert dates == sorted(dates)

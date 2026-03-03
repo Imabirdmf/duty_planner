@@ -51,8 +51,8 @@ class Planner:
         return self.messages
 
     def create_plan(self):
-        duties_for_month = self.duty_repo.get_list_of_duties_ordered_by_date(
-            self.start_date, self.end_date
+        duties_for_month = self.duty_repo.get_list_of_duties(
+            self.start_date, self.end_date, ordered=True
         )
         logger.info("duties for month: %s", duties_for_month)
         staff_availability = StaffAvailability()

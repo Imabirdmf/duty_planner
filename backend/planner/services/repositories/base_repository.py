@@ -3,6 +3,7 @@ from django.db import models
 
 class BaseRepository[T: models.Model]:
     model: type[T]
+    default_ordering: str | None = None
 
     def __init__(self):
         if self.model is None:
@@ -11,7 +12,8 @@ class BaseRepository[T: models.Model]:
             )
 
     def get_all(self):
-        return self.model.objects.all()
+        qs = self.model.objects.all()
+        return qs.order_by(self.default_ordering) if self.default_ordering else qs
 
     def get_by_id(self, obj_id: int) -> T:
         return self.model.objects.get(id=obj_id)
