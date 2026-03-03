@@ -12,7 +12,7 @@ class StaffRepository(BaseRepository[Staff]):
     model = Staff
     default_ordering = "email"
 
-    def update_priority(self, user_id, value=None, diff=None):
+    def update_priority(self, user_id: int, value=None, diff=None) -> None:
         if value is not None:
             Staff.objects.filter(id=user_id).update(priority=Greatest(value, 0))
         elif diff is not None:
@@ -25,7 +25,7 @@ class StaffRepository(BaseRepository[Staff]):
         min_priority = users.aggregate(min_priority=Min("priority"))["min_priority"]
         return min_priority
 
-    def set_minimum_priority_for_all(self, min_priority: int):
+    def set_minimum_priority_for_all(self, min_priority: int) -> None:
         users = Staff.objects.filter(priority__gt=0)
         logger.info(
             "пользователи после фильтрации: %s", [(u.priority, u.id) for u in users]

@@ -17,29 +17,26 @@ from .serializers import (
     StaffSerializer,
 )
 from .services.assignments import ManageAssignments
-from .services.planner import Planner
 
 logger = logging.getLogger(__name__)
 
 
-class StaffViewSet(viewsets.ModelViewSet):
-    serializer_class = StaffSerializer
-
+class BaseAssignmentViewSet(viewsets.ModelViewSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.assignments = ManageAssignments()
+
+
+class StaffViewSet(BaseAssignmentViewSet):
+    serializer_class = StaffSerializer
 
     def get_queryset(self) -> QuerySet:
         qs = self.assignments.get_all_staff()
         return qs
 
 
-class DaysOffViewSet(viewsets.ModelViewSet):
+class DaysOffViewSet(BaseAssignmentViewSet):
     serializer_class = DaysOffSerializer
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.assignments = ManageAssignments()
 
     def get_queryset(self) -> QuerySet:
         return self.assignments.get_days_off()
@@ -62,12 +59,8 @@ class DaysOffViewSet(viewsets.ModelViewSet):
         return self.assignments.get_days_off(start_date, end_date)
 
 
-class DutyAssignmentViewSet(viewsets.ModelViewSet):
+class DutyAssignmentViewSet(BaseAssignmentViewSet):
     serializer_class = DutyAssignmentSerializer
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.assignments = ManageAssignments()
 
     def get_queryset(self) -> QuerySet:
         qs = self.assignments.get_all_duty_assignments()
@@ -95,12 +88,12 @@ class DutyAssignmentViewSet(viewsets.ModelViewSet):
 
         dates = self.assignments.create_duty_days(serialized_dates)
         start_date, end_date = self.assignments.get_date_range(dates)
-        plan = Planner(start_date, end_date, people_per_day)
 
         try:
             with transaction.atomic():
-                errors = plan.create_plan()
-                plan.set_minimum_priority()
+                errors = self.assignments.create_plan(
+                    start_date, end_date, people_per_day
+                )
                 duties = self.assignments.get_duties_by_date(start_date, end_date)
                 serializer = DutyWithAssignmentsSerializer(duties, many=True)
                 data = {"errors": errors, "data": serializer.data}

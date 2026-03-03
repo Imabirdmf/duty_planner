@@ -7,7 +7,7 @@ from planner.services.repositories.base_repository import BaseRepository
 class DutyRepository(BaseRepository[Duty]):
     model = Duty
 
-    def get_previous_duty(self, date) -> Duty:
+    def get_previous_duty(self, date: datetime.date) -> int | None:
         return (
             Duty.objects.filter(date__lt=date)
             .order_by("date")
@@ -15,17 +15,19 @@ class DutyRepository(BaseRepository[Duty]):
             .last()
         )
 
-    def get_first_element_by_date(self, duty_date) -> Duty:
+    def get_first_element_by_date(self, duty_date: datetime.date) -> Duty | None:
         return Duty.objects.filter(date=duty_date).first()
 
-    def get_list_of_duties(self, start_date, end_date, ordered: bool = False):
+    def get_list_of_duties(
+        self, start_date: datetime.date, end_date: datetime.date, ordered: bool = False
+    ):
         qs = Duty.objects.filter(
             date__gte=start_date, date__lte=end_date
         ).prefetch_related("dutyassignment_set__user")
 
         return qs.order_by("date") if ordered else qs
 
-    def save_duty_days(self, dates: list[datetime.date,]) -> list[datetime.date,]:
+    def save_duty_days(self, dates: list[datetime.date,]) -> list[datetime.date]:
         Duty.objects.bulk_update_or_create(
             [Duty(date=duty_date) for duty_date in dates],
             update_fields=["date"],

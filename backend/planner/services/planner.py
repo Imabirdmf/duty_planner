@@ -14,11 +14,20 @@ logger = logging.getLogger(__name__)
 
 
 class Planner:
-    def __init__(self, start_date, end_date, people_for_day=2):
-        self.duty_assignment_repo = DutyAssignmentRepository()
-        self.staff_repo = StaffRepository()
-        self.days_off_repo = DaysOffRepository()
-        self.duty_repo = DutyRepository()
+    def __init__(
+        self,
+        start_date,
+        end_date,
+        people_for_day=2,
+        duty_repo=None,
+        staff_repo=None,
+        days_off_repo=None,
+        duty_assignment_repo=None,
+    ):
+        self.duty_repo = duty_repo or DutyRepository()
+        self.staff_repo = staff_repo or StaffRepository()
+        self.days_off_repo = days_off_repo or DaysOffRepository()
+        self.duty_assignment_repo = duty_assignment_repo or DutyAssignmentRepository()
         self.messages = {}
         self.people_for_day: int = people_for_day
         self.start_date = start_date

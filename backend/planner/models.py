@@ -37,7 +37,7 @@ class DaysOff(models.Model):
 
 class Duty(models.Model):
     date = models.DateField(db_index=True, unique=True)
-    team_id = None
+    # team_id = None
 
     objects = BulkUpdateOrCreateQuerySet.as_manager()
 
