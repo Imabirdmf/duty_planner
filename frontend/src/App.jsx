@@ -16,6 +16,15 @@ const api = axios.create({
   timeout: 5000,
 });
 
+const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const CalendarWeekdayHeader = () => (
+  <div className="grid grid-cols-7 gap-1 mb-1">
+    {WEEKDAY_LABELS.map(d => (
+      <div key={d} className="aspect-square flex items-center justify-center text-[9px] font-black text-slate-400">{d}</div>
+    ))}
+  </div>
+);
+
 const App = () => {
   // Состояние для генерации графика (Блок Параметры)
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -314,6 +323,7 @@ const App = () => {
                                   <div className="text-[10px] font-black uppercase text-blue-600 mb-3 text-center border-b pb-2 border-slate-50">
                                     {new Date(vacationMonth).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}
                                   </div>
+                                  <CalendarWeekdayHeader />
                                   <div className="grid grid-cols-7 gap-1">
                                     {getDaysInMonth(vacationMonth).map(d => (
                                       <button key={d} onClick={() => handleAddVacation(u.id, d)} className="aspect-square rounded-lg text-[10px] font-bold hover:bg-blue-50 text-slate-600 border border-transparent hover:border-blue-100">{Number.parseInt(d.split('-')[2], 10)}</button>
@@ -435,22 +445,25 @@ const App = () => {
                     <label htmlFor="shift-size-input" className="text-[10px] font-black text-slate-400 uppercase">People per Shift</label>
                     <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-1">
                       <button onClick={() => setShiftSize(Math.max(1, shiftSize-1))} className="p-2 text-slate-400 hover:text-blue-600 font-black">-</button>
-                      <input id="shift-size-input" type="number" value={shiftSize} readOnly className="w-full bg-transparent border-0 text-center text-xs font-black text-slate-700" />
+                      <input id="shift-size-input" type="number" value={shiftSize} readOnly className="w-full bg-transparent border-0 text-center text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"/>
                       <button onClick={() => setShiftSize(Math.min(users.length, shiftSize+1))} className="p-2 text-slate-400 hover:text-blue-600 font-black">+</button>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <span className="block text-[10px] font-black text-slate-400 uppercase">Days to Schedule</span>
-                  <div className="grid grid-cols-7 gap-1 bg-slate-50/50 p-2 rounded-2xl border border-slate-100">
-                    {getDaysInMonth(currentMonth).map((d) => (
-                      <button key={`sel-day-${d}`} onClick={() => setSelectedDutyDays(prev => prev.includes(d) ? prev.filter(x => x!==d) : [...prev, d])} className={`aspect-square rounded-lg text-[10px] font-bold transition-all border ${selectedDutyDays.includes(d) ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200 hover:text-blue-400'}`}>
-                        {Number.parseInt(d.split('-')[2], 10)}
-                      </button>
-                    ))}
+                    <span className="block text-[10px] font-black text-slate-400 uppercase">Days to Schedule</span>
+                    <div className="bg-slate-50/50 p-2 rounded-2xl border border-slate-100">
+                      <CalendarWeekdayHeader />
+                      <div className="grid grid-cols-7 gap-1">
+                        {getDaysInMonth(currentMonth).map((d) => (
+                          <button key={`sel-day-${d}`} onClick={() => setSelectedDutyDays(prev => prev.includes(d) ? prev.filter(x => x!==d) : [...prev, d])} className={`aspect-square rounded-lg text-[10px] font-bold transition-all border ${selectedDutyDays.includes(d) ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200 hover:text-blue-400'}`}>
+                            {Number.parseInt(d.split('-')[2], 10)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
 
                 <button
                   onClick={async () => {
