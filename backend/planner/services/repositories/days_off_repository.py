@@ -10,4 +10,6 @@ class DaysOffRepository(BaseRepository[DaysOff]):
         return DaysOff.objects.filter(user_id=user_id, date=date).exists()
 
     def get_list_of_days_off(self, start_date, end_date) -> QuerySet[DaysOff]:
-        return DaysOff.objects.filter(date__gte=start_date, date__lte=end_date)
+        return DaysOff.objects.filter(
+            date__gte=start_date, date__lte=end_date
+        ).order_by("date")
