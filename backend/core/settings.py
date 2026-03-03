@@ -27,11 +27,11 @@ LOGGING = {
         "handlers": ["console"],
         "level": "INFO",
     },
-    "loggers": {
-        "django.db.backends": {
-            "level": "DEBUG",
-        }
-    },
+    # "loggers": {
+    #     "django.db.backends": {
+    #         "level": "DEBUG",
+    #     }
+    # },
 }
 
 
