@@ -47,7 +47,9 @@ class ManageAssignments:
         return dates[0], dates[-1]
 
     def get_days_off(
-        self, start_date: datetime.date | None, end_date: datetime.date | None
+        self,
+        start_date: datetime.date | None = None,
+        end_date: datetime.date | None = None,
     ) -> QuerySet[DaysOff]:
         if start_date and end_date:
             return self.days_off_repo.get_list_of_days_off(start_date, end_date)
@@ -62,9 +64,6 @@ class ManageAssignments:
 
     def get_all_duties(self):
         return self.duty_repo.get_all()
-
-    def get_all_days_off(self):
-        return self.days_off_repo.get_all()
 
     def create_assignment(self, duty_date, user_id: int) -> DutyAssignment:
         with transaction.atomic():

@@ -42,25 +42,24 @@ class DaysOffViewSet(viewsets.ModelViewSet):
         self.assignments = ManageAssignments()
 
     def get_queryset(self) -> QuerySet:
-        return self.assignments.get_all_days_off()
+        return self.assignments.get_days_off()
 
     def filter_queryset(self, queryset: QuerySet) -> QuerySet:
         start_date_str = self.request.query_params.get("start_date")
         end_date_str = self.request.query_params.get("end_date")
-        if start_date_str and end_date_str:
-            serializer = DatesQuerySerializer(data=self.request.query_params)
-            if not serializer.is_valid():
-                raise ValidationError(serializer.errors)
 
-            start_date = serializer.validated_data.get("start_date")
-            end_date = serializer.validated_data.get("end_date")
+        if not (start_date_str and end_date_str):
+            return queryset
 
-            if start_date and end_date:
-                qs = queryset.filter(date__gte=start_date, date__lte=end_date)
-                logger.debug(f"Filtered days off: {start_date} to {end_date}")
-        else:
-            qs = queryset
-        return qs
+        serializer = DatesQuerySerializer(data=self.request.query_params)
+        if not serializer.is_valid():
+            raise ValidationError(serializer.errors)
+
+        start_date = serializer.validated_data.get("start_date")
+        end_date = serializer.validated_data.get("end_date")
+
+        logger.debug(f"Filtered days off: {start_date} to {end_date}")
+        return self.assignments.get_days_off(start_date, end_date)
 
 
 class DutyAssignmentViewSet(viewsets.ModelViewSet):
