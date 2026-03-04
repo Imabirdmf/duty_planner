@@ -5,6 +5,7 @@ import {
   Plus, AlertCircle, UserPlus, RotateCcw, ChevronLeft, ChevronRight,
   CalendarDays
 } from 'lucide-react';
+import { DaysOffPicker } from './DaysOffPicker';
 
 const API_URL = import.meta.env.PROD
   ? ''
@@ -317,20 +318,7 @@ const App = () => {
                               </div>
                             ))}
                             <div className="relative" ref={activeVacationPopover === u.id ? vacationRef : null}>
-                              <button onClick={() => setActiveVacationPopover(activeVacationPopover === u.id ? null : u.id)} className={`p-1.5 border rounded-lg transition-all ${activeVacationPopover === u.id ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'border-dashed border-slate-200 text-slate-400 hover:border-blue-300'}`}><Plus size={14}/></button>
-                              {activeVacationPopover === u.id && (
-                                <div className="absolute right-0 top-full mt-2 z-[100] bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-64 animate-in zoom-in-95">
-                                  <div className="text-[10px] font-black uppercase text-blue-600 mb-3 text-center border-b pb-2 border-slate-50">
-                                    {new Date(vacationMonth).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}
-                                  </div>
-                                  <CalendarWeekdayHeader />
-                                  <div className="grid grid-cols-7 gap-1">
-                                    {getDaysInMonth(vacationMonth).map(d => (
-                                      <button key={d} onClick={() => handleAddVacation(u.id, d)} className="aspect-square rounded-lg text-[10px] font-bold hover:bg-blue-50 text-slate-600 border border-transparent hover:border-blue-100">{Number.parseInt(d.split('-')[2], 10)}</button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                              <DaysOffPicker userId={u.id} onSuccess={fetchVacations} api={api} onError={setError}/>
                             </div>
                           </div>
                         </td>

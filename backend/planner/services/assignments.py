@@ -74,6 +74,11 @@ class ManageAssignments:
         else:
             return self.days_off_repo.get_all()
 
+    def create_days_off(
+        self, user_id: int, dates: list[datetime.date]
+    ) -> list[DaysOff]:
+        return self.days_off_repo.bulk_create(user_id, dates)
+
     def get_all_staff(self) -> QuerySet[Staff]:
         return self.staff_repo.get_all()
 

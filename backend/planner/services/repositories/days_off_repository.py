@@ -18,3 +18,8 @@ class DaysOffRepository(BaseRepository[DaysOff]):
         return DaysOff.objects.filter(
             date__gte=start_date, date__lte=end_date
         ).order_by("date")
+
+    def bulk_create(self, user_id: int, dates: list[datetime.date]) -> list[DaysOff]:
+        return DaysOff.objects.bulk_create(
+            [DaysOff(user_id=user_id, date=date) for date in dates]
+        )

@@ -2,6 +2,8 @@
 Tests for ViewSets (API endpoints)
 """
 
+import datetime
+
 import pytest
 from rest_framework import status
 from planner.models import Staff, DaysOff, Duty, DutyAssignment
@@ -83,15 +85,29 @@ class TestDaysOffViewSet:
 
     def test_create_day_off(self, api_client, staff_user, tomorrow):
         """Test creating day off"""
-        data = {"user": staff_user.id, "date": tomorrow.isoformat()}
+        data = {"user": staff_user.id, "dates": [tomorrow.isoformat()]}
         response = api_client.post("/api/days-off/", data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
         assert DaysOff.objects.count() == 1
 
+    def test_create_days_off(self, api_client, staff_user, tomorrow):
+        """Test creating day off"""
+        data = {
+            "user": staff_user.id,
+            "dates": [
+                tomorrow.isoformat(),
+                (tomorrow + datetime.timedelta(days=1)).isoformat(),
+            ],
+        }
+        response = api_client.post("/api/days-off/", data, format="json")
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert DaysOff.objects.count() == 2
+
     def test_create_day_off_past_date(self, api_client, staff_user, yesterday):
         """Test creating day off with past date - should fail"""
-        data = {"user": staff_user.id, "date": yesterday.isoformat()}
+        data = {"user": staff_user.id, "dates": [yesterday.isoformat()]}
         response = api_client.post("/api/days-off/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -99,11 +115,11 @@ class TestDaysOffViewSet:
 
     def test_create_duplicate_day_off(self, api_client, day_off):
         """Test creating duplicate day off"""
-        data = {"user": day_off.user.id, "date": day_off.date.isoformat()}
+        data = {"user": day_off.user.id, "dates": [day_off.date.isoformat()]}
         response = api_client.post("/api/days-off/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "уже есть выходной" in str(response.data)
+        assert "уже есть выходные" in str(response.data)
 
     def test_delete_day_off(self, api_client, day_off):
         """Test deleting day off"""

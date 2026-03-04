@@ -28,6 +28,33 @@ class DaysOffSerializer(serializers.ModelSerializer):
         ]
 
 
+class DaysOffBulkSerializer(serializers.Serializer):
+    dates = serializers.ListField(
+        child=serializers.DateField(validators=[validate_date_not_past]),
+        allow_empty=False,
+    )
+    user = serializers.PrimaryKeyRelatedField(queryset=Staff.objects.all())
+
+    def validate(self, data):
+        user = data["user"]
+        dates = data["dates"]
+
+        if len(dates) != len(set(dates)):
+            raise serializers.ValidationError("В запросе есть повторяющиеся даты.")
+
+        existing_dates = DaysOff.objects.filter(user=user, date__in=dates).values_list(
+            "date", flat=True
+        )
+
+        if existing_dates:
+            raise serializers.ValidationError(
+                f"У этого сотрудника уже есть выходные на даты: "
+                f"{', '.join([date.isoformat() for date in existing_dates])}"
+            )
+
+        return data
+
+
 class DutyAssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:

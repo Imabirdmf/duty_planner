@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from .serializers import (
     DatesQuerySerializer,
+    DaysOffBulkSerializer,
     DaysOffSerializer,
     DutyAssignmentChangeSerializer,
     DutyAssignmentGenerateSerializer,
@@ -38,6 +39,11 @@ class StaffViewSet(BaseAssignmentViewSet):
 class DaysOffViewSet(BaseAssignmentViewSet):
     serializer_class = DaysOffSerializer
 
+    def get_serializer_class(self):
+        if self.action == "create":
+            return DaysOffBulkSerializer
+        return DaysOffSerializer
+
     def get_queryset(self) -> QuerySet:
         return self.assignments.get_days_off()
 
@@ -57,6 +63,18 @@ class DaysOffViewSet(BaseAssignmentViewSet):
 
         logger.debug(f"Filtered days off: {start_date} to {end_date}")
         return self.assignments.get_days_off(start_date, end_date)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        days_off = self.assignments.create_days_off(
+            user_id=serializer.validated_data["user"].id,
+            dates=serializer.validated_data["dates"],
+        )
+
+        response_data = DaysOffSerializer(days_off, many=True).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class DutyAssignmentViewSet(BaseAssignmentViewSet):
