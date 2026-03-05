@@ -161,7 +161,7 @@ function CalendarGrid({
 }
 
 // ── Основной компонент ───────────────────────────────────────────
-export function DaysOffPicker({ userId, onSuccess, api, onError, existingDates = [] }) {
+export function DaysOffPicker({ userId, onSuccess, api, onError, existingDates = [], vacationMonth }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState("multi"); // 'multi' | 'range'
 
@@ -182,6 +182,14 @@ export function DaysOffPicker({ userId, onSuccess, api, onError, existingDates =
   const [_submitError, setSubmitError] = useState(null);
 
   const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && vacationMonth) {
+      const [year, month] = vacationMonth.split("-").map(Number);
+      setViewYear(year);
+      setViewMonth(month - 1); // month 0-based
+    }
+  }, [isOpen, vacationMonth]);
 
   // Close on outside click
   useEffect(() => {

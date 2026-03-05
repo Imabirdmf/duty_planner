@@ -353,6 +353,7 @@ const App = () => {
                           existingDates={vacations
                             .filter((v) => v.user === u.id)
                             .map((v) => v.date)}
+                          vacationMonth={vacationMonth}
                         />
                       </div>
                     </td>
