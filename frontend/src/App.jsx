@@ -83,10 +83,42 @@ const DutyAnalyticsTab = ({ users, api }) => {
     fetchStats();
   }, [users]);
 
-  if (loading) return (
-    <div className="py-20 text-center animate-pulse font-bold text-slate-400 uppercase text-[10px]">
-      Loading...
-    </div>
+  if (loading)
+    return (
+      <div className="overflow-visible px-2 pb-2">
+        <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
+          <thead>
+            <tr className="text-[10px] uppercase font-black text-slate-400">
+              <th className="px-6 py-3 w-1/4">Employee</th>
+              <th className="px-6 py-3 w-3/4">Duties</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* ✅ Скелетон строк равно количеству сотрудников */}
+            {Array.from({ length: users.length || 5 }).map((_, idx) => (
+              <tr key={`skeleton-${idx}`} className="group">
+                <td className="px-6 py-3 bg-slate-50/30 rounded-l-2xl transition-colors">
+                  <div className="space-y-2">
+                    <div className="h-4 bg-slate-200 rounded-lg w-24 animate-pulse" />
+                    <div className="h-3 bg-slate-100 rounded-lg w-32 animate-pulse" />
+                  </div>
+                </td>
+                <td className="px-6 py-3 bg-slate-50/30 rounded-r-2xl transition-colors">
+                  <div className="flex flex-wrap gap-1.5">
+                    {/* 8 скелетон полосок */}
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-7 h-7 rounded-lg bg-slate-200 animate-pulse flex-shrink-0"
+                      />
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
   );
   if (error) return (
     <div className="py-20 text-center text-red-500 font-bold text-[10px] uppercase">{error}</div>
@@ -97,6 +129,25 @@ const DutyAnalyticsTab = ({ users, api }) => {
 
   return (
     <div className="overflow-visible px-2 pb-2 relative">
+        {/* ✅ ЛЕГЕНДА в верхнем правом углу */}
+        {months.length > 0 && !loading && (
+        <div className="absolute top-0 right-16 bg-white">
+          <div className="flex flex-wrap items-center gap-2">
+            {months.map(month => (
+              <div key={month} className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: MONTH_COLORS[months.indexOf(month) % MONTH_COLORS.length] }}
+                />
+                <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
+                  {toMonthLabel(month)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
         <thead>
           <tr className="text-[10px] uppercase font-black text-slate-400">
@@ -648,7 +699,7 @@ const App = () => {
               Select a period above to see the schedule
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {displayDates.map((date) => {
                 const assigned = timetable[date] || [];
                 const isHighlighted = highlightedDates.has(date);
