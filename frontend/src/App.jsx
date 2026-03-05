@@ -75,13 +75,16 @@ const App = () => {
   }, []);
 
   const fetchVacations = useCallback(async () => {
+    const { startDate, endDate } = getMonthRange(vacationMonth);
     try {
-      const res = await api.get("/vacations/");
+      const res = await api.get("/days-off/", {
+        params: { start_date: startDate, end_date: endDate },
+      });
       setVacations(res.data);
-    } catch {
+      } catch {
       setError("Failed to load vacations");
-    }
-  }, []);
+      }
+    }, [vacationMonth]);
 
   const fetchTimetable = useCallback(async () => {
     const { startDate, endDate } = getMonthRange(currentMonth);
@@ -100,20 +103,20 @@ const App = () => {
     } catch {
       setTimetable({});
     }
-  }, [currentMonth, getMonthRange]);
+  }, [currentMonth]);
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
   useEffect(() => {
     if (users.length > 0 && shiftSize > users.length) setShiftSize(users.length);
   }, [users, shiftSize]);
   useEffect(() => {
     fetchVacations();
-  }, [fetchVacations]);
+  }, [vacationMonth]);
   useEffect(() => {
     fetchTimetable();
-  }, [fetchTimetable]);
+  }, [currentMonth]);
 
   // Когда меняются selectedDutyDays — синхронизируем currentMonth
   useEffect(() => {

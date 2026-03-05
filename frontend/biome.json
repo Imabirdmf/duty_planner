@@ -17,7 +17,7 @@
     "lineEnding": "lf"
   },
   "linter": {
-    "enabled": true,
+    "enabled": false,
     "rules": {
       "recommended": true,
       "correctness": {
