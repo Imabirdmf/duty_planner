@@ -47,7 +47,8 @@ const DutyAnalyticsTab = ({ users, api }) => {
       try {
         const now = new Date();
         const startDate = `${now.getFullYear()}-01-01`;
-        const endDate = now.toISOString().slice(0, 10);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const endDate = endOfMonth.toISOString().slice(0, 10);
 
         const res = await api.get("/users/stats/", {
           params: { start_date: startDate, end_date: endDate },
@@ -100,7 +101,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
         <thead>
           <tr className="text-[10px] uppercase font-black text-slate-400">
             <th className="px-6 py-3 w-1/4">Employee</th>
-            <th className="px-6 py-3 w-3/4">Duties</th>
+            <th className="px-3 py-3 w-3/4">Duties</th>
           </tr>
         </thead>
         <tbody>
@@ -110,8 +111,8 @@ const DutyAnalyticsTab = ({ users, api }) => {
                 <div className="font-bold text-slate-800 text-sm truncate">{row.name}</div>
                 <div className="text-[11px] text-slate-400 truncate mt-0.5">{row.email}</div>
               </td>
-              <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors align-middle">
-                <div className="flex flex-wrap gap-1.5">
+              <td className="px-3 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors align-middle">
+                <div className="flex flex-wrap gap-0.5">
                   {months.map(month => {
                     const duty = row.duties.find(d => d.month === month);
                     const count = duty?.duty_count ?? 0;
@@ -126,7 +127,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
                           }}
                           onMouseLeave={() => setHoveredDuty(null)}
                           style={{ backgroundColor: MONTH_COLORS[months.indexOf(month) % MONTH_COLORS.length] }}
-                          className="w-7 h-7 rounded-lg flex-shrink-0 cursor-pointer hover:scale-110 transition-transform"
+                          className="w-3 h-7 rounded-lg flex-shrink-0 cursor-pointer hover:scale-110 transition-transform"
                         />
                       );
                     });
@@ -170,7 +171,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
 
           {/* Итого */}
           <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400 font-bold">ВСЕГО:</span>
+            <span className="text-[11px] text-slate-400 font-bold">Summary:</span>
             <span className="text-[12px] font-black text-blue-600">
               {hoveredDuty.row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
             </span>
@@ -511,7 +512,7 @@ const App = () => {
               <thead>
                 <tr className="text-[10px] uppercase font-black text-slate-400">
                   <th className="px-6 py-3 w-1/4">Employee</th>
-                  <th className="px-6 py-3 w-3/4">Days Off for Period</th>
+                  <th className="px-3 py-3 w-3/4">Days Off for Period</th>
                 </tr>
               </thead>
               <tbody>
@@ -523,7 +524,7 @@ const App = () => {
                       </div>
                       <div className="text-[11px] text-slate-400 truncate mt-0.5">{u.email}</div>
                     </td>
-                    <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors overflow-visible">
+                    <td className="px-3 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors overflow-visible">
                       <div className="flex flex-wrap gap-1.5 items-center">
                         {vacations
                           .filter((v) => v.user === u.id)

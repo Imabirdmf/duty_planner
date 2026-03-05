@@ -134,7 +134,7 @@ class ManageAssignments:
         stats = self.duty_assignment_repo.get_duty_stats(
             start_date=start_date, end_date=end_date
         )
-        logger.info('stats: %s', stats)
+        logger.info("stats: %s", stats)
         grouped_stats = itertools.groupby(stats, key=lambda x: x["user_id"])
         result = []
         for key, values in grouped_stats:
@@ -143,5 +143,5 @@ class ManageAssignments:
                 for x in values
             ]
             result.append({"user": key, "duties": duties})
-        logger.info('result: %s', result)
+        logger.info("result: %s", result)
         return result
