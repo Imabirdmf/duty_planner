@@ -48,7 +48,7 @@ class DutyAssignmentRepository(BaseRepository[DutyAssignment]):
                 duty__date__gte=start_date, duty__date__lte=end_date
             )
             .annotate(month=TruncMonth("duty__date"))
-            .values("user_id", "user__last_name", "month")
+            .values("user_id", "user__email", "month")
             .annotate(duty_count=Count("id"))
-            .order_by("user_id", "month")
+            .order_by("user__email", "month")
         )
