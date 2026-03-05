@@ -41,7 +41,9 @@
   }
 
   /* Плавные переходы для всех интерактивных элементов */
-  button, a, input {
+  button,
+  a,
+  input {
     @apply transition-all duration-200;
   }
 }

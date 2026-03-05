@@ -1,21 +1,33 @@
-import { useState, useRef, useEffect } from 'react';
-import { CalendarDays, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const MONTHS_EN = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function isSameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() &&
+  return (
+    a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+    a.getDate() === b.getDate()
+  );
 }
 
 function toISO(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function getDaysInMonth(year, month) {
@@ -29,7 +41,18 @@ function getDaysInMonth(year, month) {
 }
 
 // ── Один календарь ──────────────────────────────────────────────
-function CalendarGrid({ year, month, mode, multiDates, rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover }) {
+function CalendarGrid({
+  year,
+  month,
+  mode,
+  multiDates,
+  rangeStart,
+  rangeEnd,
+  hoverDate,
+  onDayClick,
+  onDayHover,
+  existingDates = [],
+}) {
   const { days, offset } = getDaysInMonth(year, month);
   const cells = [];
 
@@ -41,40 +64,46 @@ function CalendarGrid({ year, month, mode, multiDates, rangeStart, rangeEnd, hov
   while (cells.length % 7 !== 0) cells.push(null);
 
   function classify(date) {
-    if (!date) return '';
+    if (!date) return "";
     const classes = [];
 
-    if (mode === 'multi') {
-      const isSelected = multiDates.some(d => isSameDay(d, date));
-      if (isSelected) classes.push('selected');
+    if (mode === "multi") {
+      const isSelected = multiDates.some((d) => isSameDay(d, date));
+      if (isSelected) classes.push("selected");
     } else {
       const isStart = rangeStart && isSameDay(date, rangeStart);
       const isEnd = rangeEnd && isSameDay(date, rangeEnd);
 
-      if (isStart) classes.push('range-start');
-      if (isEnd) classes.push('range-end');
+      if (isStart) classes.push("range-start");
+      if (isEnd) classes.push("range-end");
 
       if (rangeStart && !rangeEnd && hoverDate) {
         const lo = rangeStart < hoverDate ? rangeStart : hoverDate;
         const hi = rangeStart < hoverDate ? hoverDate : rangeStart;
-        if (date > lo && date < hi) classes.push('in-range');
-        if (isSameDay(date, hoverDate) && !isSameDay(date, rangeStart)) classes.push('range-hover-end');
+        if (date > lo && date < hi) classes.push("in-range");
+        if (isSameDay(date, hoverDate) && !isSameDay(date, rangeStart))
+          classes.push("range-hover-end");
       } else if (rangeStart && rangeEnd) {
         const lo = rangeStart < rangeEnd ? rangeStart : rangeEnd;
         const hi = rangeStart < rangeEnd ? rangeEnd : rangeStart;
-        if (date > lo && date < hi) classes.push('in-range');
+        if (date > lo && date < hi) classes.push("in-range");
       }
     }
 
-    return classes.join(' ');
+    return classes.join(" ");
   }
 
   return (
     <div>
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {WEEKDAYS.map(d => (
-          <div key={d} className="aspect-square flex items-center justify-center text-[9px] font-black text-slate-400">{d}</div>
+        {WEEKDAYS.map((d) => (
+          <div
+            key={d}
+            className="aspect-square flex items-center justify-center text-[9px] font-black text-slate-400"
+          >
+            {d}
+          </div>
         ))}
       </div>
 
@@ -84,35 +113,45 @@ function CalendarGrid({ year, month, mode, multiDates, rangeStart, rangeEnd, hov
           if (!date) return <div key={`e-${idx}`} className="aspect-square" />;
 
           const cls = classify(date);
-          const isRangeStart = cls.includes('range-start');
-          const isRangeEnd = cls.includes('range-end') || cls.includes('range-hover-end');
-          const isInRange = cls.includes('in-range');
-          const isSelected = cls.includes('selected');
+          const isRangeStart = cls.includes("range-start");
+          const isRangeEnd = cls.includes("range-end") || cls.includes("range-hover-end");
+          const isInRange = cls.includes("in-range");
+          const isSelected = cls.includes("selected");
           const isToday = isSameDay(date, new Date());
+          const isExisting = existingDates.includes(toISO(date));
 
           return (
             <button
+              type="button"
               key={toISO(date)}
               onClick={() => onDayClick(date)}
-              onMouseEnter={() => onDayHover && onDayHover(date)}
+              onMouseEnter={() => onDayHover?.(date)}
               className={[
-                'aspect-square flex items-center justify-center text-[10px] font-bold transition-all rounded-lg',
+                "aspect-square flex items-center justify-center text-[10px] font-bold transition-all rounded-lg relative",
                 isRangeStart || isRangeEnd
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? "bg-blue-600 text-white shadow-sm"
                   : isSelected
-                  ? 'bg-blue-600 text-white shadow-sm scale-105'
-                  : isInRange
-                  ? 'bg-blue-50 text-blue-700 rounded-none'
-                  : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600',
+                    ? "bg-blue-600 text-white shadow-sm scale-105"
+                    : isInRange
+                      ? "bg-blue-50 text-blue-700 rounded-none"
+                      : "text-slate-600 hover:bg-blue-50 hover:text-blue-600",
                 isToday && !isRangeStart && !isRangeEnd && !isSelected
-                  ? 'ring-1 ring-blue-300'
-                  : '',
-                // Square left/right edges for range continuity
-                isRangeStart && rangeEnd ? 'rounded-r-none' : '',
-                isRangeEnd && rangeStart ? 'rounded-l-none' : '',
-              ].filter(Boolean).join(' ')}
+                  ? "ring-1 ring-blue-300"
+                  : "",
+                isRangeStart && rangeEnd ? "rounded-r-none" : "",
+                isRangeEnd && rangeStart ? "rounded-l-none" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
               {date.getDate()}
+              {/* Dot indicator for existing days off */}
+              {isExisting && !isSelected && !isRangeStart && !isRangeEnd && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-slate-400" />
+              )}
+              {isExisting && (isSelected || isRangeStart || isRangeEnd) && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-200" />
+              )}
             </button>
           );
         })}
@@ -122,9 +161,9 @@ function CalendarGrid({ year, month, mode, multiDates, rangeStart, rangeEnd, hov
 }
 
 // ── Основной компонент ───────────────────────────────────────────
-export function DaysOffPicker({ userId, onSuccess, api, onError }) {
+export function DaysOffPicker({ userId, onSuccess, api, onError, existingDates = [] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState('multi'); // 'multi' | 'range'
+  const [mode, setMode] = useState("multi"); // 'multi' | 'range'
 
   // Calendar navigation
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
@@ -140,7 +179,7 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
 
   // Request state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
+  const [_submitError, setSubmitError] = useState(null);
 
   const wrapperRef = useRef(null);
 
@@ -151,8 +190,8 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
         setIsOpen(false);
       }
     }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   function navigateMonth(delta) {
@@ -172,10 +211,10 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
 
   function handleDayClick(date) {
     setSubmitError(null);
-    if (mode === 'multi') {
-      setMultiDates(prev =>
-        prev.some(d => isSameDay(d, date))
-          ? prev.filter(d => !isSameDay(d, date))
+    if (mode === "multi") {
+      setMultiDates((prev) =>
+        prev.some((d) => isSameDay(d, date))
+          ? prev.filter((d) => !isSameDay(d, date))
           : [...prev, date]
       );
     } else {
@@ -199,7 +238,7 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
 
   // Build the list of dates to submit
   function getSelectedDates() {
-    if (mode === 'multi') {
+    if (mode === "multi") {
       return [...multiDates].sort((a, b) => a - b).map(toISO);
     } else {
       if (!rangeStart || !rangeEnd) return [];
@@ -224,10 +263,10 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
     setSubmitError(null);
 
     try {
-        await api.post('/days-off/', {
-          user: userId,
-          dates: selectedDates,
-        });
+      await api.post("/days-off/", {
+        user: userId,
+        dates: selectedDates,
+      });
 
       // Reset & close
       setMultiDates([]);
@@ -237,7 +276,7 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
       onSuccess?.();
     } catch (err) {
       const data = err.response?.data;
-      let message = 'Не удалось сохранить';
+      let message = "Не удалось сохранить";
       if (data?.non_field_errors?.length) {
         message = data.non_field_errors[0];
       } else if (data?.dates) {
@@ -256,14 +295,14 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
   }
 
   // Trigger label
-  function getTriggerLabel() {
+  function _getTriggerLabel() {
     if (selectedDates.length === 0) return null;
-    if (mode === 'range' && rangeStart && rangeEnd) {
-      return `${rangeStart.getDate()} ${MONTHS_EN[rangeStart.getMonth()].slice(0,3)} – ${rangeEnd.getDate()} ${MONTHS_EN[rangeEnd.getMonth()].slice(0,3)}`;
+    if (mode === "range" && rangeStart && rangeEnd) {
+      return `${rangeStart.getDate()} ${MONTHS_EN[rangeStart.getMonth()].slice(0, 3)} – ${rangeEnd.getDate()} ${MONTHS_EN[rangeEnd.getMonth()].slice(0, 3)}`;
     }
-    if (mode === 'multi') {
+    if (mode === "multi") {
       return selectedDates.length === 1
-        ? `${multiDates[0].getDate()} ${MONTHS_EN[multiDates[0].getMonth()].slice(0,3)}`
+        ? `${multiDates[0].getDate()} ${MONTHS_EN[multiDates[0].getMonth()].slice(0, 3)}`
         : `${selectedDates.length} days selected`;
     }
     return null;
@@ -273,18 +312,17 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
 
   return (
     <div className="relative" ref={wrapperRef}>
-
-      {/* ── Trigger button ── */}
       <button
-        onClick={() => setIsOpen(v => !v)}
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
         className={[
-          'p-1.5 border rounded-lg transition-all',
+          "p-1.5 border rounded-lg transition-all",
           isOpen
-            ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
+            ? "bg-blue-600 text-white border-blue-600 shadow-lg"
             : hasSelection
-            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:border-blue-300'
-            : 'border-dashed border-slate-200 text-slate-400 hover:border-blue-300',
-        ].join(' ')}
+              ? "bg-blue-50 text-blue-600 border-blue-200 hover:border-blue-300"
+              : "border-dashed border-slate-200 text-slate-400 hover:border-blue-300",
+        ].join(" ")}
       >
         <CalendarDays size={14} />
       </button>
@@ -292,21 +330,21 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
       {/* ── Dropdown popover ── */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 z-[200] bg-white border border-slate-200 shadow-2xl rounded-2xl w-72 animate-in zoom-in-95 overflow-hidden">
-
           {/* Mode tabs */}
           <div className="grid grid-cols-2 border-b border-slate-100">
-            {(['multi', 'range']).map(m => (
+            {["multi", "range"].map((m) => (
               <button
+                type="button"
                 key={m}
                 onClick={() => handleModeSwitch(m)}
                 className={[
-                  'py-2.5 text-[10px] font-black uppercase tracking-widest transition-all',
+                  "py-2.5 text-[10px] font-black uppercase tracking-widest transition-all",
                   mode === m
-                    ? 'text-blue-600 border-b-2 border-blue-600 -mb-px bg-blue-50/50'
-                    : 'text-slate-400 hover:text-slate-600',
-                ].join(' ')}
+                    ? "text-blue-600 border-b-2 border-blue-600 -mb-px bg-blue-50/50"
+                    : "text-slate-400 hover:text-slate-600",
+                ].join(" ")}
               >
-                {m === 'multi' ? '◈ Multi-select' : '⟷ Range'}
+                {m === "multi" ? "◈ Multi-select" : "⟷ Range"}
               </button>
             ))}
           </div>
@@ -314,6 +352,7 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
           {/* Calendar header */}
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <button
+              type="button"
               onClick={() => navigateMonth(-1)}
               className="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
             >
@@ -331,10 +370,7 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
           </div>
 
           {/* Calendar grid */}
-          <div
-            className="px-3 pb-2"
-            onMouseLeave={() => setHoverDate(null)}
-          >
+          <div className="px-3 pb-2" onMouseLeave={() => setHoverDate(null)}>
             <CalendarGrid
               year={viewYear}
               month={viewMonth}
@@ -344,28 +380,29 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
               rangeEnd={rangeEnd}
               hoverDate={hoverDate}
               onDayClick={handleDayClick}
-              onDayHover={mode === 'range' ? setHoverDate : undefined}
+              onDayHover={mode === "range" ? setHoverDate : undefined}
+              existingDates={existingDates}
             />
           </div>
 
           {/* Status + Apply */}
           <div className="border-t border-slate-100 px-3 py-2.5 flex items-center justify-between gap-2">
             <div className="text-[10px] text-slate-400 font-bold flex-1 min-w-0 truncate">
-              {mode === 'range' && !rangeStart && 'Select start date'}
-              {mode === 'range' && rangeStart && !rangeEnd && (
+              {mode === "range" && !rangeStart && "Select start date"}
+              {mode === "range" && rangeStart && !rangeEnd && (
                 <span className="text-blue-500">
-                  {rangeStart.getDate()} {MONTHS_EN[rangeStart.getMonth()].slice(0,3)} → select end
+                  {rangeStart.getDate()} {MONTHS_EN[rangeStart.getMonth()].slice(0, 3)} → select end
                 </span>
               )}
-              {mode === 'range' && rangeStart && rangeEnd && (
+              {mode === "range" && rangeStart && rangeEnd && (
                 <span className="text-blue-600">
-                  {selectedDates.length} day{selectedDates.length !== 1 ? 's' : ''}
+                  {selectedDates.length} day{selectedDates.length !== 1 ? "s" : ""}
                 </span>
               )}
-              {mode === 'multi' && multiDates.length === 0 && 'Click dates to select'}
-              {mode === 'multi' && multiDates.length > 0 && (
+              {mode === "multi" && multiDates.length === 0 && "Click dates to select"}
+              {mode === "multi" && multiDates.length > 0 && (
                 <span className="text-blue-600">
-                  {multiDates.length} date{multiDates.length !== 1 ? 's' : ''} selected
+                  {multiDates.length} date{multiDates.length !== 1 ? "s" : ""} selected
                 </span>
               )}
             </div>
@@ -374,20 +411,21 @@ export function DaysOffPicker({ userId, onSuccess, api, onError }) {
               onClick={handleApply}
               disabled={!canApply || isSubmitting}
               className={[
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex-shrink-0',
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex-shrink-0",
                 canApply && !isSubmitting
-                  ? 'bg-slate-900 text-white hover:bg-black shadow-sm'
-                  : 'bg-slate-100 text-slate-300 cursor-not-allowed',
-              ].join(' ')}
+                  ? "bg-slate-900 text-white hover:bg-black shadow-sm"
+                  : "bg-slate-100 text-slate-300 cursor-not-allowed",
+              ].join(" ")}
             >
               {isSubmitting ? (
                 <span className="animate-pulse">Saving...</span>
               ) : (
-                <><Check size={11} /> Apply</>
+                <>
+                  <Check size={11} /> Apply
+                </>
               )}
             </button>
           </div>
-
         </div>
       )}
     </div>
