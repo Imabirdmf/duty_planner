@@ -1,6 +1,7 @@
 import datetime
 
-from django.db.models import QuerySet
+from django.db.models import Count, QuerySet
+from django.db.models.functions import TruncMonth
 from planner.models import DutyAssignment, Staff
 from planner.services.repositories.base_repository import BaseRepository
 
@@ -40,3 +41,14 @@ class DutyAssignmentRepository(BaseRepository[DutyAssignment]):
             "user"
         )
         return [a.user for a in assignments]
+
+    def get_duty_stats(self, start_date: datetime.date, end_date: datetime.date):
+        return (
+            DutyAssignment.objects.filter(
+                duty__date__gte=start_date, duty__date__lte=end_date
+            )
+            .annotate(month=TruncMonth("duty__date"))
+            .values("user_id", "user__last_name", "month")
+            .annotate(duty_count=Count("id"))
+            .order_by("user_id", "month")
+        )

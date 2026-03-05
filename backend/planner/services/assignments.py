@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import logging
 
 from django.db import transaction
@@ -128,3 +129,17 @@ class ManageAssignments:
             self.create_assignment(duty_date, user_id=new_user_id)
         elif prev_user_id and new_user_id is None:
             self.delete_assignment(duty_date, user_id=prev_user_id)
+
+    def get_staff_duties(self, start_date: datetime.date, end_date: datetime.date):
+        stats = self.duty_assignment_repo.get_duty_stats(
+            start_date=start_date, end_date=end_date
+        )
+        grouped_stats = itertools.groupby(stats, key=lambda x: x["user_id"])
+        result = []
+        for key, values in grouped_stats:
+            duties = [
+                {"month": x["month"].month, "duty_count": x["duty_count"]}
+                for x in values
+            ]
+            result.append({"user": key, "duties": duties})
+        return result

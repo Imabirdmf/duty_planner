@@ -156,7 +156,7 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 CSRF_TRUSTED_ORIGINS = [
     "https://dutyplannerfrontend-production.up.railway.app",
     "https://dutyplannerbackend.railway.internal",
-    "https://dutyplannerfrontend-staging.up.railway.app"
+    "https://dutyplannerfrontend-staging.up.railway.app",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True

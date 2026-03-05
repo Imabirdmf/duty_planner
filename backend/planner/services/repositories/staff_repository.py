@@ -1,7 +1,6 @@
-import datetime
 import logging
 
-from django.db.models import F, Min, Count, Q
+from django.db.models import F, Min
 from django.db.models.functions import Greatest
 from planner.models import Staff
 from planner.services.repositories.base_repository import BaseRepository
@@ -36,12 +35,3 @@ class StaffRepository(BaseRepository[Staff]):
         logger.info(
             "пользователи после апдейта: %s", [(u.priority, u.id) for u in users]
         )
-
-    def get_duty_stats(self, start_date:datetime.date, end_date: datetime.date):
-        return Staff.objects.annotate(
-            duty_count=Count(
-                "dutyassignment",
-                filter=Q(dutyassignment__duty__date__gte=start_date,
-                         dutyassignment__duty__date__lte=end_date)
-            )
-        ).order_by("-duty_count")

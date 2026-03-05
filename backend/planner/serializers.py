@@ -13,6 +13,16 @@ class StaffSerializer(serializers.ModelSerializer):
         fields = ("id", "email", "last_name", "first_name", "full_name")
 
 
+class MonthlyDutyCountSerializer(serializers.Serializer):
+    month = serializers.IntegerField()
+    duty_count = serializers.IntegerField()
+
+
+class StaffDutyStatsSerializer(serializers.Serializer):
+    user = serializers.IntegerField()
+    duties = MonthlyDutyCountSerializer(many=True)
+
+
 class DaysOffSerializer(serializers.ModelSerializer):
     date = serializers.DateField(validators=[validate_date_not_past])
 

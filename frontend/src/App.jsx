@@ -13,16 +13,6 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { DaysOffPicker } from "./DaysOffPicker";
 import { ScheduleDatePicker } from "./ScheduleDatePicker";
 
@@ -40,48 +30,43 @@ const MONTH_COLORS = [
   "#EC4899", "#6366F1", "#14B8A6", "#A855F7",
 ];
 
-// Формат ответа: [{ user: 4, duties: [{ month: "2025-03", count: 3 }, ...] }]
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const toMonthLabel = (m) => MONTH_NAMES[(Number(m) - 1) % 12] ?? String(m);
+
+// Формат ответа: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
 const DutyAnalyticsTab = ({ users, api }) => {
-  const [chartData, setChartData] = useState([]);   // строки — сотрудники
-  const [months, setMonths] = useState([]);          // колонки — месяцы
+  const [rows, setRows] = useState([]);
+  const [months, setMonths] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchStats = async (retryCount = 0) => {
       try {
-        const res = await api.get("/users/stats");
-        const raw = res.data; // [{ user: id, duties: [{ month, count }] }]
+        const now = new Date();
+        const startDate = `${now.getFullYear()}-01-01`;
+        const endDate = now.toISOString().slice(0, 10);
 
-        // Собираем все уникальные месяцы в хронологическом порядке
+        const res = await api.get("/users/stats/", {
+          params: { start_date: startDate, end_date: endDate },
+        });
+        const raw = res.data.data ?? res.data;
+
         const monthSet = new Set();
         raw.forEach(row => row.duties.forEach(d => monthSet.add(d.month)));
-        const sortedMonths = Array.from(monthSet).sort();
+        const sortedMonths = Array.from(monthSet).sort((a, b) => a - b);
         setMonths(sortedMonths);
 
-        // Для каждого сотрудника строим строку данных.
-        // Каждое дежурство — отдельная "ячейка" значением 1.
-        // Чтобы recharts мог стекировать по одному дежурству,
-        // создаём ключи вида "2025-03__0", "2025-03__1" и т.д.
-        // Максимальное кол-во дежурств за месяц определяет кол-во ключей.
-        const maxPerMonth = {};
-        raw.forEach(row =>
-          row.duties.forEach(d => {
-            maxPerMonth[d.month] = Math.max(maxPerMonth[d.month] || 0, d.count);
-          })
-        );
-        const rows = raw.map(row => {
+        const formatted = raw.map(row => {
           const user = users.find(u => u.id === row.user);
-          const entry = { name: user ? (user.full_name || user.name) : `#${row.user}` };
-          row.duties.forEach(d => {
-            for (let i = 0; i < (maxPerMonth[d.month] || 0); i++) {
-              entry[`${d.month}__${i}`] = i < d.count ? 1 : 0;
-            }
-          });
-          return entry;
+          return {
+            userId: row.user,
+            name: user ? (user.full_name || user.name) : `#${row.user}`,
+            email: user?.email ?? "",
+            duties: row.duties,
+          };
         });
-
-        setChartData(rows);
+        setRows(formatted);
         setLoading(false);
       } catch (err) {
         if (retryCount < 4) {
@@ -103,135 +88,51 @@ const DutyAnalyticsTab = ({ users, api }) => {
   if (error) return (
     <div className="py-20 text-center text-red-500 font-bold text-[10px] uppercase">{error}</div>
   );
-  if (!chartData.length) return (
+  if (!rows.length) return (
     <div className="py-20 text-center text-slate-300 font-bold text-sm">Нет данных</div>
   );
 
-  // Строим список всех Bar-сегментов: для каждого месяца — по maxPerMonth[month] баров со stackId=month
-  const bars = [];
-  months.forEach((month, mIdx) => {
-    const color = MONTH_COLORS[mIdx % MONTH_COLORS.length];
-    const max = Math.max(...chartData.map(row => {
-      let cnt = 0;
-      while (row[`${month}__${cnt}`] !== undefined) cnt++;
-      return cnt;
-    }));
-    for (let i = 0; i < max; i++) {
-      bars.push(
-        <Bar
-          key={`${month}__${i}`}
-          dataKey={`${month}__${i}`}
-          stackId={month}
-          fill={color}
-          barSize={20}
-          // Скругляем первый и последний сегмент стека
-          radius={i === 0 ? [4, 4, 4, 4] : [0, 0, 0, 0]}
-          // Убираем gap между сегментами одного стека
-          isAnimationActive={false}
-          // Не показываем в легенде дубли — только первый сегмент месяца
-          legendType={i === 0 ? "circle" : "none"}
-          name={i === 0 ? month : undefined}
-        />
-      );
-    }
-    // Зазор между месяцами — добавляем невидимый бар-разделитель
-    bars.push(
-      <Bar
-        key={`${month}__gap`}
-        dataKey={`__gap__${month}`}
-        stackId={`gap_${month}`}
-        fill="transparent"
-        barSize={4}
-        legendType="none"
-        isAnimationActive={false}
-      />
-    );
-  });
-
-  const barHeight = 28;
-  const chartHeight = Math.max(300, chartData.length * (barHeight * months.length + 24) + 60);
-
   return (
-    <div className="p-6">
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <BarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
-          barCategoryGap="30%"
-          barGap={2}
-        >
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#F1F5F9" />
-          <XAxis
-            type="number"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#94A3B8", fontSize: 10, fontWeight: 800 }}
-            allowDecimals={false}
-          />
-          <YAxis
-            dataKey="name"
-            type="category"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#475569", fontSize: 11, fontWeight: 700 }}
-            width={120}
-          />
-          <Tooltip
-            cursor={{ fill: "#F8FAFC" }}
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null;
-              // Группируем сегменты по месяцу
-              const byMonth = {};
-              payload.forEach(p => {
-                if (!p.dataKey || p.dataKey.startsWith("__gap")) return;
-                const month = p.dataKey.split("__")[0];
-                byMonth[month] = (byMonth[month] || 0) + (p.value || 0);
-              });
-              const entries = Object.entries(byMonth).filter(([, v]) => v > 0);
-              if (!entries.length) return null;
-              return (
-                <div className="bg-white p-4 border border-slate-100 shadow-2xl rounded-2xl min-w-[200px]">
-                  <p className="font-black text-slate-800 mb-3 text-[11px] uppercase tracking-wider border-b border-slate-50 pb-2">
-                    {label}
-                  </p>
-                  <div className="space-y-2">
-                    {entries.map(([month, count], i) => (
-                      <div key={month} className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 text-[10px] font-bold">
-                          <div
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: MONTH_COLORS[months.indexOf(month) % MONTH_COLORS.length] }}
-                          />
-                          <span className="text-slate-500 uppercase">{month}</span>
-                        </div>
-                        <span className="text-slate-900 bg-slate-50 px-2 py-0.5 rounded-md text-[10px] font-black">
-                          {count}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="pt-2 mt-2 border-t border-slate-50 flex justify-between items-center font-black text-blue-600 text-[10px] uppercase">
-                      <span>Всего:</span>
-                      <span>{entries.reduce((s, [, v]) => s + v, 0)}</span>
-                    </div>
-                  </div>
+    <div className="overflow-visible px-2 pb-2">
+      <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
+        <thead>
+          <tr className="text-[10px] uppercase font-black text-slate-400">
+            <th className="px-6 py-3 w-1/4">Employee</th>
+            <th className="px-6 py-3 w-3/4">Duties</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.userId} className="group">
+              <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors align-middle">
+                <div className="font-bold text-slate-800 text-sm truncate">{row.name}</div>
+                <div className="text-[11px] text-slate-400 truncate mt-0.5">{row.email}</div>
+              </td>
+              <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-r-2xl transition-colors align-middle">
+                <div className="flex flex-wrap gap-1.5">
+                  {months.map(month => {
+                    const duty = row.duties.find(d => d.month === month);
+                    const count = duty?.duty_count ?? 0;
+                    const color = MONTH_COLORS[months.indexOf(month) % MONTH_COLORS.length];
+                    return Array.from({ length: count }).map((_, i) => (
+                      <div
+                        key={`${month}-${i}`}
+                        title={toMonthLabel(month)}
+                        style={{ backgroundColor: color }}
+                        className="w-7 h-7 rounded-lg flex-shrink-0"
+                      />
+                    ));
+                  })}
                 </div>
-              );
-            }}
-          />
-          <Legend
-            verticalAlign="top"
-            align="right"
-            iconType="circle"
-            formatter={(value) => value}
-            wrapperStyle={{ paddingBottom: "16px", fontSize: "10px", fontWeight: "800", textTransform: "uppercase" }}
-          />
-          {bars}
-        </BarChart>
-      </ResponsiveContainer>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
+
 
 const App = () => {
   // currentMonth — стейт, задаёт какой месяц показывать в расписании
@@ -551,8 +452,8 @@ const App = () => {
                   <ChevronRight size={16} />
                 </button>
               </div>
-            )}
-          </div>
+              )}
+            </div>
 
           {/* Tab content */}
           {staffTab === "analytics" ? (

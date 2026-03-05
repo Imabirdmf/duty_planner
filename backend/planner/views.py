@@ -15,6 +15,7 @@ from .serializers import (
     DutyAssignmentGenerateSerializer,
     DutyAssignmentSerializer,
     DutyWithAssignmentsSerializer,
+    StaffDutyStatsSerializer,
     StaffSerializer,
 )
 from .services.assignments import ManageAssignments
@@ -34,6 +35,19 @@ class StaffViewSet(BaseAssignmentViewSet):
     def get_queryset(self) -> QuerySet:
         qs = self.assignments.get_all_staff()
         return qs
+
+    @action(detail=False, methods=["get"])
+    def stats(self, request):
+        query_serializer = DatesQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+
+        start_date = query_serializer.validated_data["start_date"]
+        end_date = query_serializer.validated_data["end_date"]
+
+        stats = self.assignments.get_staff_duties(start_date, end_date)
+        serializer = StaffDutyStatsSerializer(data=stats, many=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 class DaysOffViewSet(BaseAssignmentViewSet):
