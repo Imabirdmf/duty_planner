@@ -47,8 +47,9 @@ const DutyAnalyticsTab = ({ users, api }) => {
       try {
         const now = new Date();
         const startDate = `${now.getFullYear()}-01-01`;
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        const endDate = endOfMonth.toISOString().slice(0, 10);
+        const endDate = `${now.getFullYear()}-12-31`;
+//         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+//         const endDate = endOfMonth.toISOString().slice(0, 10);
 
         const res = await api.get("/users/stats/", {
           params: { start_date: startDate, end_date: endDate },
@@ -89,8 +90,8 @@ const DutyAnalyticsTab = ({ users, api }) => {
         <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
           <thead>
             <tr className="text-[10px] uppercase font-black text-slate-400">
-              <th className="px-6 py-3 w-1/4">Employee</th>
-              <th className="px-3 py-3 w-3/4">Duties</th>
+              <th className="px-6 py-3 w-0 whitespace-nowrap">Employee</th>
+              <th className="px-3 py-3 w-full">Duties</th>
             </tr>
           </thead>
           <tbody>
@@ -127,30 +128,28 @@ const DutyAnalyticsTab = ({ users, api }) => {
 
     return (
     <div className="overflow-visible px-2 pb-2 relative">
-      {/* ✅ ЛЕГЕНДА */}
+        {/*Legend */}
       {months.length > 0 && !loading && (
         <div className="absolute top-0 right-16 bg-white">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-slate-600">
             {months.map(month => (
-              <div key={month} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
+              <div key={month} className="flex items-center gap-1.5 whitespace-nowrap">
+                <span
+                  className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: MONTH_COLORS[months.indexOf(month) % MONTH_COLORS.length] }}
                 />
-                <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
-                  {toMonthLabel(month)}
-                </span>
+                {toMonthLabel(month)}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
+      <table className="w-full text-left border-separate border-spacing-y-1">
         <thead>
           <tr className="text-[10px] uppercase font-black text-slate-400">
-            <th className="px-6 py-3 w-1/4">Employee</th>
-            <th className="px-3 py-3 w-3/4">Duties</th>
+            <th className="px-6 py-3 w-0 whitespace-nowrap">Employee</th>
+            <th className="px-3 py-3 w-full">Duties</th>
           </tr>
         </thead>
         <tbody>
@@ -164,7 +163,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
               }}
               onMouseLeave={() => setHoveredRow(null)}
             >
-              <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors align-middle">
+              <td className="px-6 py-3 whitespace-nowrap bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors align-middle">
                 <div className="font-bold text-slate-800 text-sm truncate">{row.name}</div>
                 <div className="text-[11px] text-slate-400 truncate mt-0.5">{row.email}</div>
               </td>
@@ -191,7 +190,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
         </tbody>
       </table>
 
-      {/* ✅ Один popover при наведении на строку */}
+      {/* ✅ Popover */}
       {hoveredRow && (
         <div
           style={{
@@ -206,12 +205,12 @@ const DutyAnalyticsTab = ({ users, api }) => {
             const row = rows.find(r => r.userId === hoveredRow);
             return (
               <>
-                {/* Название */}
+                {/* Name */}
                 <div className="font-bold text-slate-800 mb-3 pb-3 border-b border-slate-100">
                   {row.name}
                 </div>
 
-                {/* Месяцы */}
+                {/* Month */}
                 <div className="space-y-2 mb-3">
                   {row.duties.map(d => (
                     <div key={d.month} className="flex items-center gap-2">
@@ -225,9 +224,9 @@ const DutyAnalyticsTab = ({ users, api }) => {
                   ))}
                 </div>
 
-                {/* Итого */}
+                {/* Total */}
                 <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 font-bold">ВСЕГО:</span>
+                  <span className="text-[11px] text-slate-400 font-bold">TOTAL</span>
                   <span className="text-[12px] font-black text-blue-600">
                     {row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
                   </span>
@@ -565,17 +564,17 @@ const App = () => {
             <DutyAnalyticsTab users={users} api={api} />
           ) : (
             <div className="overflow-visible px-2 pb-2">
-            <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
+            <table className="w-full text-left border-separate border-spacing-y-1">
               <thead>
                 <tr className="text-[10px] uppercase font-black text-slate-400">
-                  <th className="px-6 py-3 w-1/4">Employee</th>
-                  <th className="px-3 py-3 w-3/4">Days Off for Period</th>
+                  <th className="px-6 py-3 w-0 whitespace-nowrap">Employee</th>
+                  <th className="px-3 py-3 w-full">Days Off for Period</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id} className="group">
-                    <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors">
+                    <td className="px-6 py-3 whitespace-nowrap whitespace-nowrap bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors">
                       <div className="font-bold text-slate-800 text-sm truncate">
                         {u.full_name || u.name}
                       </div>

@@ -209,12 +209,12 @@ export function ScheduleDatePicker({
       {isOpen && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[150] bg-white border border-slate-200 shadow-2xl rounded-2xl w-64 overflow-hidden">
           {lockedMonth && (
-            <div className="px-4 pt-2.5 text-[9px] text-slate-400 font-bold text-center">
+            <div className="px-4 pt-2.5 text-[9px] text-slate-400 font-bold flex items-center justify-center">
               Locked to {MONTHS_EN[lockedMonth.month]} {lockedMonth.year}
               <button
                 type="button"
                 onClick={clearAll}
-                className="ml-2 text-blue-400 hover:text-blue-600 underline cursor-pointer"
+                className="ml-2 text-blue-400 hover:text-blue-600 cursor-pointer"
               >
                 reset
               </button>
