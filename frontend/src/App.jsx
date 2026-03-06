@@ -90,11 +90,10 @@ const DutyAnalyticsTab = ({ users, api }) => {
           <thead>
             <tr className="text-[10px] uppercase font-black text-slate-400">
               <th className="px-6 py-3 w-1/4">Employee</th>
-              <th className="px-6 py-3 w-3/4">Duties</th>
+              <th className="px-3 py-3 w-3/4">Duties</th>
             </tr>
           </thead>
           <tbody>
-            {/* ✅ Скелетон строк равно количеству сотрудников */}
             {Array.from({ length: users.length || 5 }).map((_, idx) => (
               <tr key={`skeleton-${idx}`} className="group">
                 <td className="px-6 py-3 bg-slate-50/30 rounded-l-2xl transition-colors">
@@ -104,12 +103,11 @@ const DutyAnalyticsTab = ({ users, api }) => {
                   </div>
                 </td>
                 <td className="px-6 py-3 bg-slate-50/30 rounded-r-2xl transition-colors">
-                  <div className="flex flex-wrap gap-1.5">
-                    {/* 8 скелетон полосок */}
+                  <div className="flex flex-wrap gap-0.5">
                     {Array.from({ length: 8 }).map((_, i) => (
                       <div
                         key={i}
-                        className="w-7 h-7 rounded-lg bg-slate-200 animate-pulse flex-shrink-0"
+                        className="w-3 h-7 rounded-lg bg-slate-200 animate-pulse flex-shrink-0"
                       />
                     ))}
                   </div>
@@ -524,35 +522,33 @@ const App = () => {
                       : "text-slate-400 hover:text-slate-600",
                   ].join(" ")}
                 >
-                  <BarChart2 size={12} /> Analytics
+                  <Users size={12} /> Analytics
                 </button>
               </div>
             </div>
 
-            {/* Right: month navigator — only on staff tab */}
-            {staffTab === "staff" && (
-              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit">
-                <button
-                  onClick={() => setVacationMonth((m) => shiftMonth(m, -1))}
-                  className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <div className="w-[140px] text-center text-[11px] font-black uppercase text-slate-600 tracking-tight">
-                  {new Date(`${vacationMonth}-01`).toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </div>
-                <button
-                  onClick={() => setVacationMonth((m) => shiftMonth(m, 1))}
-                  className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
-                >
-                  <ChevronRight size={16} />
-                </button>
+            {/* Right: month navigator — always reserve space */}
+            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit" style={{ visibility: staffTab !== "staff" ? "hidden" : "visible" }}>
+              <button
+                onClick={() => setVacationMonth((m) => shiftMonth(m, -1))}
+                className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-[140px] text-center text-[11px] font-black uppercase text-slate-600 tracking-tight">
+                {new Date(`${vacationMonth}-01`).toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
               </div>
-              )}
+              <button
+                onClick={() => setVacationMonth((m) => shiftMonth(m, 1))}
+                className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
+          </div>
 
           {/* Tab content */}
           {staffTab === "analytics" ? (
