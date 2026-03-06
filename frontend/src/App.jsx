@@ -34,58 +34,9 @@ const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "Ju
 const toMonthLabel = (m) => MONTH_NAMES[(Number(m) - 1) % 12] ?? String(m);
 
 // Response: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
-const DutyAnalyticsTab = ({ users, api, refreshTrigger }) => {
-  const [rows, setRows] = useState([]);
-  const [months, setMonths] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
   const [hoveredRow, setHoveredRow] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
-  
-
-  useEffect(() => {
-    if (users.length === 0) return;
-
-    const fetchStats = async (retryCount = 0) => {
-      try {
-        const now = new Date();
-        const startDate = `${now.getFullYear()}-01-01`;
-        const endDate = `${now.getFullYear()}-12-31`;
-//         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-//         const endDate = endOfMonth.toISOString().slice(0, 10);
-
-        const res = await api.get("/users/stats/", {
-          params: { start_date: startDate, end_date: endDate },
-        });
-        const raw = res.data;
-
-        const monthSet = new Set();
-        raw.forEach(row => row.duties.forEach(d => monthSet.add(d.month)));
-        const sortedMonths = Array.from(monthSet).sort((a, b) => a - b);
-        setMonths(sortedMonths);
-
-        const formatted = raw.map(row => {
-          const user = users.find(u => u.id === row.user);
-          return {
-            userId: row.user,
-            name: user ? (user.full_name || user.name) : `#${row.user}`,
-            email: user?.email ?? "",
-            duties: row.duties,
-          };
-        });
-        setRows(formatted);
-        setLoading(false);
-      } catch (err) {
-        if (retryCount < 2) {
-          setTimeout(() => fetchStats(retryCount + 1), Math.pow(2, retryCount) * 1000);
-        } else {
-          setError("Error loading");
-          setLoading(false);
-        }
-      }
-    };
-    fetchStats();
-  }, [users, api, refreshTrigger]);
 
   if (loading)
     return (
@@ -129,7 +80,7 @@ const DutyAnalyticsTab = ({ users, api, refreshTrigger }) => {
     <div className="py-20 text-center text-slate-300 font-bold text-sm">Нет данных</div>
   );
 
-    return (
+  return (
     <div className="overflow-visible px-2 pb-2 relative">
         {/*Legend */}
       {months.length > 0 && !loading && (
@@ -262,6 +213,10 @@ const App = () => {
   const [activeEditPopover, setActiveEditPopover] = useState(null);
   const [activeAddUserPopover, setActiveAddUserPopover] = useState(null);
   const [analyticsRefresh, setAnalyticsRefresh] = useState(0);
+  const [analyticsRows, setAnalyticsRows] = useState([]);
+  const [analyticsMonths, setAnalyticsMonths] = useState([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState(null);
 
   const editRef = useRef(null);
   const addUserRef = useRef(null);
@@ -312,6 +267,40 @@ const App = () => {
       }
     }, [vacationMonth]);
 
+  // Добавить fetchStats как useCallback:
+  const fetchAnalytics = useCallback(async (retryCount = 0) => {
+    if (users.length === 0) return;
+    try {
+      const now = new Date();
+      const startDate = `${now.getFullYear()}-01-01`;
+      const endDate = `${now.getFullYear()}-12-31`;
+      const res = await api.get("/users/stats/", {
+        params: { start_date: startDate, end_date: endDate },
+      });
+      const raw = res.data;
+      const monthSet = new Set();
+      raw.forEach(row => row.duties.forEach(d => monthSet.add(d.month)));
+      setAnalyticsMonths(Array.from(monthSet).sort((a, b) => a - b));
+      setAnalyticsRows(raw.map(row => {
+        const user = users.find(u => u.id === row.user);
+        return {
+          userId: row.user,
+          name: user ? (user.full_name || user.name) : `#${row.user}`,
+          email: user?.email ?? "",
+          duties: row.duties,
+        };
+      }));
+      setAnalyticsLoading(false);
+    } catch {
+    if (retryCount < 2) {
+      setTimeout(() => fetchAnalytics(retryCount + 1), Math.pow(2, retryCount) * 1000);
+    } else {
+      setAnalyticsError("Error loading");
+      setAnalyticsLoading(false);
+    }
+  }
+}, [users]);
+
   const fetchTimetable = useCallback(async () => {
     const { startDate, endDate } = getMonthRange(currentMonth);
     try {
@@ -340,6 +329,9 @@ const App = () => {
   useEffect(() => {
     fetchVacations();
   }, [vacationMonth]);
+  useEffect(() => {
+    fetchAnalytics();
+  }, [users, analyticsRefresh]);
   useEffect(() => {
     fetchTimetable();
   }, [currentMonth]);
@@ -571,7 +563,7 @@ const App = () => {
           {/* Tab content */}
           <div style={{ minHeight: `${getContentHeight()}px` }}>
             {staffTab === "analytics" ? (
-              <DutyAnalyticsTab users={users} api={api} refreshTrigger={analyticsRefresh} />
+              <DutyAnalyticsTab rows={analyticsRows} months={analyticsMonths} loading={analyticsLoading} error={analyticsError} />
             ) : (
             <div className="overflow-visible px-2 pb-2">
             <table className="w-full text-left border-separate border-spacing-y-1">
