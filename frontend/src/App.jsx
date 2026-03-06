@@ -37,6 +37,47 @@ const toMonthLabel = (m) => MONTH_NAMES[(Number(m) - 1) % 12] ?? String(m);
 const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
   const [hoveredRow, setHoveredRow] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
+  const [visible, setVisible] = useState(false);
+  const posRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef(null);
+  const popoverRef = useRef(null);
+
+  const handleMouseMove = useCallback((e, userId) => {
+    // Обновляем позицию через rAF — плавно, без лишних ре-рендеров
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const x = e.clientX;
+      const y = e.clientY;
+      const popoverW = popoverRef.current?.offsetWidth ?? 256;
+      const popoverH = popoverRef.current?.offsetHeight ?? 300;
+      const margin = 12;
+      const cursorOffset = 16;
+      
+    // По горизонтали: сначала пробуем справа, если не влезает — слева
+    const fitsRight = x + cursorOffset + popoverW + margin < window.innerWidth;
+    const finalX = fitsRight
+      ? x + cursorOffset
+      : x - cursorOffset - popoverW;
+
+    // По вертикали: центрируем по курсору, но прижимаем к краям
+    const idealY = y - popoverH / 2;
+    const finalY = Math.max(
+      margin,
+      Math.min(idealY, window.innerHeight - popoverH - margin)
+    );
+
+      setPopoverPos({ x: finalX, y: finalY });
+      if (userId !== hoveredRow) setHoveredRow(userId);
+      setVisible(true);
+    });
+  }, [hoveredRow]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setVisible(false);
+    // Небольшая задержка чтобы transition успел отыграть до unmount
+    setTimeout(() => setHoveredRow(null), 150);
+  }, []);
 
   if (loading)
     return (
@@ -111,11 +152,8 @@ const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
             <tr
               key={row.userId}
               className="group"
-              onMouseEnter={(e) => {
-                setHoveredRow(row.userId);
-                setPopoverPos({ x: e.clientX, y: e.clientY });
-              }}
-              onMouseLeave={() => setHoveredRow(null)}
+              onMouseMove={(e) => handleMouseMove(e, row.userId)}
+              onMouseLeave={handleMouseLeave}
             >
               <td className="px-6 py-3 whitespace-nowrap bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors align-middle">
                 <div className="font-bold text-slate-800 text-sm truncate">{row.name}</div>
@@ -144,55 +182,103 @@ const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
         </tbody>
       </table>
 
-      {/* ✅ Popover */}
-      {hoveredRow && (
-        <div
-          style={{
-            position: 'fixed',
-            left: `${popoverPos.x}px`,
-            top: `${popoverPos.y - 20}px`,
-            transform: 'translate(-50%, -100%)',
-          }}
-          className="z-[1000] bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-64 animate-in zoom-in-95"
-        >
-          {rows.find(r => r.userId === hoveredRow) && (() => {
-            const row = rows.find(r => r.userId === hoveredRow);
-            return (
-              <>
-                {/* Name */}
-                <div className="font-bold text-slate-800 mb-3 pb-3 border-b border-slate-100">
-                  {row.name}
-                </div>
-
-                {/* Month */}
-                <div className="space-y-2 mb-3">
-                  {row.duties.map(d => (
-                    <div key={d.month} className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: MONTH_COLORS[months.indexOf(d.month) % MONTH_COLORS.length] }}
-                      />
-                      <span className="text-[11px] text-slate-600 flex-1">{toMonthLabel(d.month)}:</span>
-                      <span className="text-[11px] font-bold text-slate-800">{d.duty_count}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Total */}
-                <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 font-bold">TOTAL</span>
-                  <span className="text-[12px] font-black text-blue-600">
-                    {row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
+      {/* ✅ Popover - pointer-events: none */}
+      {hoveredRow && (() => {
+        const row = rows.find(r => r.userId === hoveredRow);
+        if (!row) return null;
+        return (
+          <div
+            ref={popoverRef}
+            style={{
+              position: 'fixed',
+              left: `${popoverPos.x}px`,
+              top: `${popoverPos.y}px`,
+              pointerEvents: 'none',           // ← не перехватывает мышь
+              opacity: visible ? 1 : 0,
+              transition: 'left 60ms ease-out, top 60ms ease-out, opacity 120ms ease',
+              willChange: 'left, top',
+            }}    
+            className="z-[1000] bg-white border border-slate-100 shadow-2xl rounded-3xl p-4 w-64"
+          >
+            <div className="font-black text-slate-800 mb-3 pb-3 border-b border-slate-100 text-xs uppercase tracking-wider">
+              {row.name}
+            </div>
+            <div className="space-y-2 mb-3">
+              {row.duties.map(d => (
+                <div key={d.month} className="flex items-center gap-2">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: MONTH_COLORS[months.indexOf(d.month) % MONTH_COLORS.length] }}
+                  />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase flex-1">
+                    {toMonthLabel(d.month)}
+                  </span>
+                  <span className="text-slate-900 bg-slate-50 px-2.5 py-1 rounded-lg text-[10px] font-black">
+                    {d.duty_count}
                   </span>
                 </div>
-              </>
-            );
-          })()}
-        </div>
-      )}
+              ))}
+            </div>
+            <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total</span>
+              <span className="text-slate-900 bg-slate-50 px-2.5 py-1 rounded-lg text-[10px] font-black">
+                {row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
+      // {hoveredRow && (
+      //   <div
+      //     style={{
+      //       position: 'fixed',
+      //       left: `${popoverPos.x}px`,
+      //       top: `${popoverPos.y - 20}px`,
+      //       transform: 'translate(-50%, -100%)',
+      //     }}
+      //     className="z-[1000] bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-64 animate-in zoom-in-95"
+      //   >
+      //     {rows.find(r => r.userId === hoveredRow) && (() => {
+      //       const row = rows.find(r => r.userId === hoveredRow);
+      //       return (
+      //         <>
+      //           {/* Name */}
+      //           <div className="font-bold text-slate-800 mb-3 pb-3 border-b border-slate-100">
+      //             {row.name}
+      //           </div>
+
+      //           {/* Month */}
+      //           <div className="space-y-2 mb-3">
+      //             {row.duties.map(d => (
+      //               <div key={d.month} className="flex items-center gap-2">
+      //                 <div
+      //                   className="w-3 h-3 rounded-full flex-shrink-0"
+      //                   style={{ backgroundColor: MONTH_COLORS[months.indexOf(d.month) % MONTH_COLORS.length] }}
+      //                 />
+      //                 <span className="text-[11px] text-slate-600 flex-1">{toMonthLabel(d.month)}:</span>
+      //                 <span className="text-[11px] font-bold text-slate-800">{d.duty_count}</span>
+      //               </div>
+      //             ))}
+      //           </div>
+
+      //           {/* Total */}
+      //           <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+      //             <span className="text-[11px] text-slate-400 font-bold">TOTAL</span>
+      //             <span className="text-[12px] font-black text-blue-600">
+      //               {row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
+      //             </span>
+      //           </div>
+      //         </>
+      //       );
+      //     })()}
+      //   </div>
+      // )}
+//     </div>
+//   );
+// };
 
 const App = () => {
   // currentMonth — стейт, задаёт какой месяц показывать в расписании
