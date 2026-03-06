@@ -39,7 +39,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
   const [months, setMonths] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [hoveredDuty, setHoveredDuty] = useState(null);
+  const [hoveredRow, setHoveredRow] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -125,10 +125,10 @@ const DutyAnalyticsTab = ({ users, api }) => {
     <div className="py-20 text-center text-slate-300 font-bold text-sm">Нет данных</div>
   );
 
-  return (
+    return (
     <div className="overflow-visible px-2 pb-2 relative">
-        {/* ✅ ЛЕГЕНДА в верхнем правом углу */}
-        {months.length > 0 && !loading && (
+      {/* ✅ ЛЕГЕНДА */}
+      {months.length > 0 && !loading && (
         <div className="absolute top-0 right-16 bg-white">
           <div className="flex flex-wrap items-center gap-2">
             {months.map(month => (
@@ -155,7 +155,15 @@ const DutyAnalyticsTab = ({ users, api }) => {
         </thead>
         <tbody>
           {rows.map(row => (
-            <tr key={row.userId} className="group">
+            <tr
+              key={row.userId}
+              className="group"
+              onMouseEnter={(e) => {
+                setHoveredRow(row.userId);
+                setPopoverPos({ x: e.clientX, y: e.clientY });
+              }}
+              onMouseLeave={() => setHoveredRow(null)}
+            >
               <td className="px-6 py-3 bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors align-middle">
                 <div className="font-bold text-slate-800 text-sm truncate">{row.name}</div>
                 <div className="text-[11px] text-slate-400 truncate mt-0.5">{row.email}</div>
@@ -170,13 +178,8 @@ const DutyAnalyticsTab = ({ users, api }) => {
                       return (
                         <div
                           key={dutyId}
-                          onMouseEnter={(e) => {
-                            setHoveredDuty({ userId: row.userId, month, row });
-                            setPopoverPos({ x: e.clientX, y: e.clientY });
-                          }}
-                          onMouseLeave={() => setHoveredDuty(null)}
                           style={{ backgroundColor: MONTH_COLORS[months.indexOf(month) % MONTH_COLORS.length] }}
-                          className="w-3 h-7 rounded-lg flex-shrink-0 cursor-pointer hover:scale-110 transition-transform"
+                          className="w-3 h-7 rounded-lg flex-shrink-0"
                         />
                       );
                     });
@@ -188,8 +191,8 @@ const DutyAnalyticsTab = ({ users, api }) => {
         </tbody>
       </table>
 
-      {/* ✅ Кастомный popover */}
-      {hoveredDuty && (
+      {/* ✅ Один popover при наведении на строку */}
+      {hoveredRow && (
         <div
           style={{
             position: 'fixed',
@@ -199,32 +202,39 @@ const DutyAnalyticsTab = ({ users, api }) => {
           }}
           className="z-[1000] bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-64 animate-in zoom-in-95"
         >
-          {/* Название */}
-          <div className="font-bold text-slate-800 mb-3 pb-3 border-b border-slate-100">
-            {hoveredDuty.row.name}
-          </div>
+          {rows.find(r => r.userId === hoveredRow) && (() => {
+            const row = rows.find(r => r.userId === hoveredRow);
+            return (
+              <>
+                {/* Название */}
+                <div className="font-bold text-slate-800 mb-3 pb-3 border-b border-slate-100">
+                  {row.name}
+                </div>
 
-          {/* Месяцы */}
-          <div className="space-y-2 mb-3">
-            {hoveredDuty.row.duties.map(d => (
-              <div key={d.month} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: MONTH_COLORS[months.indexOf(d.month) % MONTH_COLORS.length] }}
-                />
-                <span className="text-[11px] text-slate-600 flex-1">{toMonthLabel(d.month)}:</span>
-                <span className="text-[11px] font-bold text-slate-800">{d.duty_count}</span>
-              </div>
-            ))}
-          </div>
+                {/* Месяцы */}
+                <div className="space-y-2 mb-3">
+                  {row.duties.map(d => (
+                    <div key={d.month} className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: MONTH_COLORS[months.indexOf(d.month) % MONTH_COLORS.length] }}
+                      />
+                      <span className="text-[11px] text-slate-600 flex-1">{toMonthLabel(d.month)}:</span>
+                      <span className="text-[11px] font-bold text-slate-800">{d.duty_count}</span>
+                    </div>
+                  ))}
+                </div>
 
-          {/* Итого */}
-          <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400 font-bold">Summary:</span>
-            <span className="text-[12px] font-black text-blue-600">
-              {hoveredDuty.row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
-            </span>
-          </div>
+                {/* Итого */}
+                <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400 font-bold">ВСЕГО:</span>
+                  <span className="text-[12px] font-black text-blue-600">
+                    {row.duties.reduce((sum, d) => sum + d.duty_count, 0)}
+                  </span>
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
