@@ -33,16 +33,19 @@ const MONTH_COLORS = [
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const toMonthLabel = (m) => MONTH_NAMES[(Number(m) - 1) % 12] ?? String(m);
 
-// Формат ответа: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
-const DutyAnalyticsTab = ({ users, api }) => {
+// Response: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
+const DutyAnalyticsTab = ({ users, api, refreshTrigger }) => {
   const [rows, setRows] = useState([]);
   const [months, setMonths] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
+  
 
   useEffect(() => {
+    if (users.length === 0) return;
+
     const fetchStats = async (retryCount = 0) => {
       try {
         const now = new Date();
@@ -54,7 +57,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
         const res = await api.get("/users/stats/", {
           params: { start_date: startDate, end_date: endDate },
         });
-        const raw = res.data.data ?? res.data;
+        const raw = res.data;
 
         const monthSet = new Set();
         raw.forEach(row => row.duties.forEach(d => monthSet.add(d.month)));
@@ -73,7 +76,7 @@ const DutyAnalyticsTab = ({ users, api }) => {
         setRows(formatted);
         setLoading(false);
       } catch (err) {
-        if (retryCount < 4) {
+        if (retryCount < 2) {
           setTimeout(() => fetchStats(retryCount + 1), Math.pow(2, retryCount) * 1000);
         } else {
           setError("Error loading");
@@ -82,12 +85,12 @@ const DutyAnalyticsTab = ({ users, api }) => {
       }
     };
     fetchStats();
-  }, [users]);
+  }, [users, api, refreshTrigger]);
 
   if (loading)
     return (
       <div className="overflow-visible px-2 pb-2">
-        <table className="w-full text-left table-fixed border-separate border-spacing-y-1">
+        <table className="w-full text-left border-separate border-spacing-y-1">
           <thead>
             <tr className="text-[10px] uppercase font-black text-slate-400">
               <th className="px-6 py-3 w-0 whitespace-nowrap">Employee</th>
@@ -258,6 +261,7 @@ const App = () => {
 
   const [activeEditPopover, setActiveEditPopover] = useState(null);
   const [activeAddUserPopover, setActiveAddUserPopover] = useState(null);
+  const [analyticsRefresh, setAnalyticsRefresh] = useState(0);
 
   const editRef = useRef(null);
   const addUserRef = useRef(null);
@@ -266,6 +270,10 @@ const App = () => {
     month: "long",
     year: "numeric",
   });
+  const getContentHeight = () => {
+  // Примерно: 60px на заголовок + 60px на каждого пользователя
+    return Math.max(400, 80 + users.length * 65);
+  };
 
   // --- Helpers ---
   const getMonthRange = (monthStr) => {
@@ -391,6 +399,7 @@ const App = () => {
         dates: selectedDutyDays,
       });
       await fetchTimetable();
+      setAnalyticsRefresh(prev => prev + 1);
       const errors = res.data?.errors || {};
       const warningMessages = [];
       const datesToHighlight = new Set();
@@ -428,14 +437,14 @@ const App = () => {
   };
 
   useEffect(() => {
-    const clickOut = (e) => {
-      if (editRef.current && !editRef.current.contains(e.target)) setActiveEditPopover(null);
-      if (addUserRef.current && !addUserRef.current.contains(e.target))
-        setActiveAddUserPopover(null);
-    };
-    document.addEventListener("mousedown", clickOut);
-    return () => document.removeEventListener("mousedown", clickOut);
-  }, []);
+        const clickOut = (e) => {
+          if (editRef.current && !editRef.current.contains(e.target)) setActiveEditPopover(null);
+          if (addUserRef.current && !addUserRef.current.contains(e.target))
+            setActiveAddUserPopover(null);
+        };
+        document.addEventListener("mousedown", clickOut);
+        return () => document.removeEventListener("mousedown", clickOut);
+      }, []);
 
   const displayDates = Array.from(new Set([...Object.keys(timetable), ...selectedDutyDays])).sort(
     (a, b) => new Date(a) - new Date(b)
@@ -560,9 +569,10 @@ const App = () => {
           </div>
 
           {/* Tab content */}
-          {staffTab === "analytics" ? (
-            <DutyAnalyticsTab users={users} api={api} />
-          ) : (
+          <div style={{ minHeight: `${getContentHeight()}px` }}>
+            {staffTab === "analytics" ? (
+              <DutyAnalyticsTab users={users} api={api} refreshTrigger={analyticsRefresh} />
+            ) : (
             <div className="overflow-visible px-2 pb-2">
             <table className="w-full text-left border-separate border-spacing-y-1">
               <thead>
@@ -616,7 +626,8 @@ const App = () => {
               </tbody>
             </table>
             </div>
-         )}
+            )}
+          </div>  
         </div>
         {/* ② Schedule — full width */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 overflow-visible">
