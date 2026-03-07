@@ -14,6 +14,7 @@ from .serializers import (
     DutyAssignmentChangeSerializer,
     DutyAssignmentGenerateSerializer,
     DutyAssignmentSerializer,
+    DutyIdsSerializer,
     DutyWithAssignmentsSerializer,
     StaffDutyStatsSerializer,
     StaffSerializer,
@@ -163,3 +164,20 @@ class DutyAssignmentViewSet(BaseAssignmentViewSet):
                 {"error": f"Не удалось переназначить: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class DutyViewSet(BaseAssignmentViewSet):
+    serializer_class = DutyIdsSerializer
+
+    @action(detail=False, methods=["post"])
+    def bulk_delete(self, request):
+        logger.info("request.data: %s", request.data)
+        duty_ids_serializer = DutyIdsSerializer(data=request.data)
+        duty_ids_serializer.is_valid(raise_exception=True)
+        logger.info("delete duty")
+        deleted_duty_count = self.assignments.bulk_delete_duties_by_id(
+            duty_ids_serializer.validated_data["duty_ids"]
+        )
+        return Response(
+            {"deleted_duty_count": deleted_duty_count}, status=status.HTTP_200_OK
+        )

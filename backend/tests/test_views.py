@@ -140,7 +140,7 @@ class TestDutyAssignmentViewSet:
             "start_date": date_range["start"].isoformat(),
             "end_date": date_range["end"].isoformat(),
         }
-        response = api_client.get("/api/duties/list_assignments/", params)
+        response = api_client.get("/api/duty-assignments/list_assignments/", params)
 
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
@@ -148,7 +148,7 @@ class TestDutyAssignmentViewSet:
 
     def test_list_assignments_missing_params(self, api_client):
         """Test list_assignments without required params"""
-        response = api_client.get("/api/duties/list_assignments/")
+        response = api_client.get("/api/duty-assignments/list_assignments/")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -158,7 +158,9 @@ class TestDutyAssignmentViewSet:
             "dates": [d.isoformat() for d in date_range["dates"]],
             "people_per_day": 2,
         }
-        response = api_client.post("/api/duties/generate/", data, format="json")
+        response = api_client.post(
+            "/api/duty-assignments/generate/", data, format="json"
+        )
 
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
@@ -173,7 +175,9 @@ class TestDutyAssignmentViewSet:
             "dates": [d.isoformat() for d in date_range["dates"]],
             "people_per_day": 5,
         }
-        response = api_client.post("/api/duties/generate/", data, format="json")
+        response = api_client.post(
+            "/api/duty-assignments/generate/", data, format="json"
+        )
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data.get("errors", {})) > 0
@@ -184,14 +188,18 @@ class TestDutyAssignmentViewSet:
             "dates": [d.isoformat() for d in date_range["dates"]],
             "people_per_day": 15,  # Max is 10
         }
-        response = api_client.post("/api/duties/generate/", data, format="json")
+        response = api_client.post(
+            "/api/duty-assignments/generate/", data, format="json"
+        )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_generate_empty_dates(self, api_client):
         """Test generation with empty dates list"""
         data = {"dates": [], "people_per_day": 2}
-        response = api_client.post("/api/duties/generate/", data, format="json")
+        response = api_client.post(
+            "/api/duty-assignments/generate/", data, format="json"
+        )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -207,7 +215,7 @@ class TestDutyAssignmentViewSet:
             "date": duty_day.date.isoformat(),
         }
         response = api_client.post(
-            "/api/duties/assign/", data, query_params=params, format="json"
+            "/api/duty-assignments/assign/", data, query_params=params, format="json"
         )
         assert response.status_code == status.HTTP_200_OK
         assert "data" in response.data
@@ -230,7 +238,7 @@ class TestDutyAssignmentViewSet:
             "date": duty_assignment.duty.date.isoformat(),
         }
         response = api_client.post(
-            "/api/duties/assign/", data, query_params=params, format="json"
+            "/api/duty-assignments/assign/", data, query_params=params, format="json"
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -251,7 +259,7 @@ class TestDutyAssignmentViewSet:
             "date": duty_assignment.duty.date.isoformat(),
         }
         response = api_client.post(
-            "/api/duties/assign/", data, query_params=params, format="json"
+            "/api/duty-assignments/assign/", data, query_params=params, format="json"
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -266,13 +274,13 @@ class TestDutyAssignmentViewSet:
             "user_id_new": staff_user.id,
             "date": duty_day.date.isoformat(),
         }
-        response = api_client.post("/api/duties/assign/", data, format="json")
+        response = api_client.post("/api/duty-assignments/assign/", data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_list_duty_assignments(self, api_client, duty_assignments):
         """Test listing all duty assignments"""
-        response = api_client.get("/api/duties/")
+        response = api_client.get("/api/duty-assignments/")
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(duty_assignments)
@@ -280,14 +288,14 @@ class TestDutyAssignmentViewSet:
     def test_create_duty_assignment(self, api_client, staff_user, duty_day):
         """Test creating duty assignment via standard create"""
         data = {"user": staff_user.id, "duty": duty_day.id}
-        response = api_client.post("/api/duties/", data, format="json")
+        response = api_client.post("/api/duty-assignments/", data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
         assert DutyAssignment.objects.count() == 1
 
     def test_delete_duty_assignment(self, api_client, duty_assignment):
         """Test deleting duty assignment"""
-        response = api_client.delete(f"/api/duties/{duty_assignment.id}/")
+        response = api_client.delete(f"/api/duty-assignments/{duty_assignment.id}/")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert DutyAssignment.objects.count() == 0
@@ -304,7 +312,9 @@ class TestViewSetIntegration:
             "dates": [d.isoformat() for d in date_range["dates"][:3]],
             "people_per_day": 2,
         }
-        response = api_client.post("/api/duties/generate/", data, format="json")
+        response = api_client.post(
+            "/api/duty-assignments/generate/", data, format="json"
+        )
         assert response.status_code == status.HTTP_200_OK
         print("# 1. Generate schedule")
 
@@ -313,7 +323,9 @@ class TestViewSetIntegration:
             "start_date": date_range["dates"][0].isoformat(),
             "end_date": date_range["dates"][2].isoformat(),
         }
-        response = api_client.get("/api/duties/list_assignments/", query_params=params)
+        response = api_client.get(
+            "/api/duty-assignments/list_assignments/", query_params=params
+        )
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["data"]) == 3
         print("# 2. List assignments")
@@ -329,7 +341,10 @@ class TestViewSetIntegration:
                 "date": first_duty.date.isoformat(),
             }
             response = api_client.post(
-                "/api/duties/assign/", modify_data, query_params=params, format="json"
+                "/api/duty-assignments/assign/",
+                modify_data,
+                query_params=params,
+                format="json",
             )
             assert response.status_code == status.HTTP_200_OK
         print("# 3. Modify assignment")

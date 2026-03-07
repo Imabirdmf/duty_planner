@@ -143,3 +143,7 @@ class ManageAssignments:
             ]
             result.append({"user": key, "duties": duties})
         return result
+
+    def bulk_delete_duties_by_id(self, ids: list[int]) -> int:
+        count = self.duty_repo.bulk_delete_by_id(ids)
+        return count

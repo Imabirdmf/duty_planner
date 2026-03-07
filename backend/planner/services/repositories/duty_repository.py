@@ -1,7 +1,10 @@
 import datetime
+import logging
 
 from planner.models import Duty
 from planner.services.repositories.base_repository import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class DutyRepository(BaseRepository[Duty]):
@@ -37,3 +40,8 @@ class DutyRepository(BaseRepository[Duty]):
             start_date=dates[0], end_date=dates[-1], ordered=True
         )
         return [d.date for d in data]
+
+    def bulk_delete_by_id(self, ids: list[int]):
+        _, deleted_count = Duty.objects.filter(id__in=ids).delete()
+        logger.info("to delete", deleted_count)
+        return deleted_count.get("planner.Duty", None)

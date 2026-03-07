@@ -255,6 +255,9 @@ const App = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [analyticsError, setAnalyticsError] = useState(null);
 
+  const [selectedDuties, setSelectedDuties] = useState(new Set()); // Set<duty_id>
+  const [deletedCount, setDeletedCount] = useState(null);
+
   const editRef = useRef(null);
   const addUserRef = useRef(null);
 
@@ -341,13 +344,16 @@ const App = () => {
   const fetchTimetable = useCallback(async () => {
     const { startDate, endDate } = getMonthRange(currentMonth);
     try {
-      const res = await api.get("/duties/list_assignments/", {
+      const res = await api.get("/duty-assignments/list_assignments/", {
         params: { start_date: startDate, end_date: endDate },
       });
       const items = res.data?.data || res.data;
       if (Array.isArray(items)) {
         const mapped = items.reduce((acc, item) => {
-          acc[item.date] = item.users.map((u) => ({ id: u.id, name: u.full_name || u.name }));
+          acc[item.date] = {
+            dutyId: item.id,  // ← id дежурства (дня)
+            users: item.users.map((u) => ({ id: u.id, name: u.full_name || u.name })),
+            };
           return acc;
         }, {});
         setTimetable(mapped);
@@ -387,7 +393,7 @@ const App = () => {
     setActiveAddUserPopover(null);
     try {
       await api.post(
-        "/duties/assign/",
+        "/duty-assignments/assign/",
         { user_id_prev: oldId, user_id_new: newId, date },
         { params: { start_date: startDate, end_date: endDate } }
       );
@@ -415,6 +421,35 @@ const App = () => {
     }
   };
 
+  const handleDutyClick = (dutyId) => {
+    setSelectedDuties(prev => {
+      const next = new Set(prev);
+      next.has(dutyId) ? next.delete(dutyId) : next.add(dutyId);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allIds = Object.values(timetable)
+      .map(v => v.dutyId)
+      .filter(Boolean);
+    setSelectedDuties(new Set(allIds));
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const res = await api.post("/duties/bulk_delete/", {
+        duty_ids: Array.from(selectedDuties),
+      });
+      setDeletedCount(res.data.deleted_duty_count);
+      setSelectedDuties(new Set());
+      await fetchTimetable();
+      setTimeout(() => setDeletedCount(null), 5000);
+    } catch {
+      setError("Failed to delete duties");
+    }
+  };
+
   const handleGenerate = async () => {
     setIsDistributing(true);
     setError(null);
@@ -422,7 +457,7 @@ const App = () => {
     setHighlightedDates(new Set());
     setSelectedDutyDays([]);
     try {
-      const res = await api.post("/duties/generate/", {
+      const res = await api.post("/duty-assignments/generate/", {
         month: currentMonth,
         people_per_day: Number.parseInt(shiftSize, 10),
         dates: selectedDutyDays,
@@ -525,6 +560,17 @@ const App = () => {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+        {deletedCount !== null && (
+          <div className="sticky top-0 z-[300] bg-emerald-50 border-b-2 border-emerald-200 text-emerald-700 p-4 rounded-2xl shadow-lg flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Info size={20} className="flex-shrink-0" />
+              <span className="font-bold text-sm">Deleted duty days: {deletedCount}</span>
+            </div>
+            <button onClick={() => setDeletedCount(null)} className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer">
+              <X size={16} />
+            </button>
           </div>
         )}
 
@@ -744,113 +790,141 @@ const App = () => {
               Select a period above to see the schedule
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {displayDates.map((date) => {
-                const assigned = timetable[date] || [];
-                const isHighlighted = highlightedDates.has(date);
-                return (
-                  <div
-                    key={date}
-                    className={`p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all relative overflow-visible ${
-                      isHighlighted
-                        ? "border-2 border-red-500 ring-2 ring-red-200 animate-pulse"
-                        : "border border-slate-100"
-                    }`}
+            <div className="relative">
+              {/* Кнопки появляются при наличии выделения */}
+              {selectedDuties.size > 0 && (
+                <div className="flex items-center justify-end gap-2 mb-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase">
+                    {selectedDuties.size} selected
+                  </span>
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
                   >
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-black text-blue-600 uppercase">
-                        {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {isHighlighted && <AlertCircle size={14} className="text-red-500" />}
-                        <span className="text-xs font-black text-slate-700">
-                          {new Date(date).getDate()}{" "}
-                          {new Date(date).toLocaleDateString("en-US", { month: "short" })}
+                    Select All
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {displayDates.map((date) => {
+                  const assigned = timetable[date]?.users || [];
+                  const dutyId = timetable[date]?.dutyId;
+                  const isHighlighted = highlightedDates.has(date);
+                  const isSelected = dutyId && selectedDuties.has(dutyId);
+                  return (
+                    <div
+                      key={date}
+                      onClick={() => dutyId && handleDutyClick(dutyId)}
+                      className={`p-4 bg-white rounded-2xl shadow-sm transition-all relative overflow-visible cursor-pointer ${
+                        isHighlighted
+                          ? "border-2 border-red-500 ring-2 ring-red-200 animate-pulse"
+                          : isSelected
+                          ? "border-2 border-red-300 ring-2 ring-red-100 bg-red-50"
+                          : "border border-slate-100 hover:shadow-md"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-[10px] font-black text-blue-600 uppercase">
+                          {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
                         </span>
-                        <div
-                          className="relative"
-                          ref={activeAddUserPopover === date ? addUserRef : null}
-                        >
-                          <button
-                            onClick={() =>
-                              setActiveAddUserPopover(activeAddUserPopover === date ? null : date)
-                            }
-                            className={`p-1.5 rounded-lg cursor-pointer ${activeAddUserPopover === date ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-50"}`}
+                        <div className="flex items-center gap-2">
+                          {isHighlighted && <AlertCircle size={14} className="text-red-500" />}
+                          <span className="text-xs font-black text-slate-700">
+                            {new Date(date).getDate()}{" "}
+                            {new Date(date).toLocaleDateString("en-US", { month: "short" })}
+                          </span>
+                          <div
+                            className="relative"
+                            ref={activeAddUserPopover === date ? addUserRef : null}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <UserPlus size={14} />
-                          </button>
-                          {activeAddUserPopover === date && (
-                            <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] py-2">
-                              {users
-                                .filter((usr) => !assigned.some((au) => au.id === usr.id))
-                                .map((usr) => (
-                                  <button
-                                    key={usr.id}
-                                    onClick={() => handleAssignmentChange(date, null, usr.id)}
-                                    className="w-full text-left px-4 py-2 text-[11px] hover:bg-blue-50 font-bold text-slate-700 transition-colors cursor-pointer"
-                                  >
-                                    {usr.full_name || usr.name}
-                                  </button>
-                                ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {assigned.map((u) => (
-                        <div
-                          key={u.id}
-                          className="group relative flex items-center justify-between bg-slate-50 p-2.5 rounded-xl text-[11px] font-bold text-slate-600"
-                        >
-                          <span className="truncate pr-2">{u.name}</span>
-                          <div className="flex gap-1">
                             <button
                               onClick={() =>
-                                setActiveEditPopover(
-                                  activeEditPopover === `${date}-${u.id}` ? null : `${date}-${u.id}`
-                                )
+                                setActiveAddUserPopover(activeAddUserPopover === date ? null : date)
                               }
-                              className="p-1 hover:bg-blue-100 rounded-md text-blue-400 cursor-pointer"
+                              className={`p-1.5 rounded-lg cursor-pointer ${activeAddUserPopover === date ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-50"}`}
                             >
-                              <RotateCcw size={12} />
+                              <UserPlus size={14} />
                             </button>
-                            <button
-                              onClick={() => handleAssignmentChange(date, u.id, null)}
-                              className="p-1 hover:bg-red-100 rounded-md text-red-400 cursor-pointer"
-                            >
-                              <X size={12} />
-                            </button>
+                            {activeAddUserPopover === date && (
+                              <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] py-2">
+                                {users
+                                  .filter((usr) => !assigned.some((au) => au.id === usr.id))
+                                  .map((usr) => (
+                                    <button
+                                      key={usr.id}
+                                      onClick={() => handleAssignmentChange(date, null, usr.id)}
+                                      className="w-full text-left px-4 py-2 text-[11px] hover:bg-blue-50 font-bold text-slate-700 transition-colors cursor-pointer"
+                                    >
+                                      {usr.full_name || usr.name}
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
                           </div>
-                          {activeEditPopover === `${date}-${u.id}` && (
-                            <div
-                              ref={editRef}
-                              className="absolute bottom-full left-0 w-full mb-1 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] py-1 max-h-48 overflow-y-auto"
-                            >
-                              {users
-                                .filter((usr) => !assigned.some((au) => au.id === usr.id))
-                                .map((usr) => (
-                                  <button
-                                    key={usr.id}
-                                    onClick={() => handleAssignmentChange(date, u.id, usr.id)}
-                                    className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-100 font-bold cursor-pointer"
-                                  >
-                                    {usr.full_name || usr.name}
-                                  </button>
-                                ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                        {assigned.map((u) => (
+                          <div
+                            key={u.id}
+                            className="group relative flex items-center justify-between bg-slate-50 p-2.5 rounded-xl text-[11px] font-bold text-slate-600"
+                          >
+                            <span className="truncate pr-2">{u.name}</span>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() =>
+                                  setActiveEditPopover(
+                                    activeEditPopover === `${date}-${u.id}` ? null : `${date}-${u.id}`
+                                  )
+                                }
+                                className="p-1 hover:bg-blue-100 rounded-md text-blue-400 cursor-pointer"
+                              >
+                                <RotateCcw size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleAssignmentChange(date, u.id, null)}
+                                className="p-1 hover:bg-red-100 rounded-md text-red-400 cursor-pointer"
+                              >
+                                <X size={12} />
+                              </button>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                      {assigned.length === 0 && (
-                        <div className="py-2 text-center text-[9px] text-slate-300 font-bold italic">
-                          No assignment
-                        </div>
-                      )}
+                            {activeEditPopover === `${date}-${u.id}` && (
+                              <div
+                                ref={editRef}
+                                className="absolute bottom-full left-0 w-full mb-1 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] py-1 max-h-48 overflow-y-auto"
+                              >
+                                {users
+                                  .filter((usr) => !assigned.some((au) => au.id === usr.id))
+                                  .map((usr) => (
+                                    <button
+                                      key={usr.id}
+                                      onClick={() => handleAssignmentChange(date, u.id, usr.id)}
+                                      className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-100 font-bold cursor-pointer"
+                                    >
+                                      {usr.full_name || usr.name}
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {assigned.length === 0 && (
+                          <div className="py-2 text-center text-[9px] text-slate-300 font-bold italic">
+                            No assignment
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
