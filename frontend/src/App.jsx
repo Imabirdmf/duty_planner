@@ -720,11 +720,11 @@ const App = () => {
           </div>
 
           {/* Controls row */}
-          <div className="mt-10 mb-6">
+          <div className="mt-10 mb-0">
             <h2 className="text-sm font-bold text-slate-700 uppercase text-xs tracking-widest border-b border-slate-50 pb-4 mb-4 ">
               Generation Parameters
             </h2>
-            <div className="flex flex-wrap items-end justify-start gap-6 mb-8 pb-5 border-b border-slate-50">
+            <div className="flex flex-wrap items-end justify-start gap-6 mb-0.5 pb-5 border-b border-slate-50">
               {/* Period */}
               <div className="flex flex-col items-center gap-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase">Period</label>
@@ -796,7 +796,7 @@ const App = () => {
           ) : (
             <div className="relative">
               {/* Кнопки появляются при наличии выделения */}
-              <div className={`flex items-center justify-end gap-2 mb-3 transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+              <div className={`flex items-center justify-end gap-2 my-4 transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                 <span className="text-[10px] font-black text-slate-400 uppercase">
                   {selectedDuties.size} selected
                 </span>
@@ -831,7 +831,7 @@ const App = () => {
                           : "border border-slate-100 hover:border-slate-200 hover:shadow-md"
                       }`}
                     >
-                      <div className="flex justify-between items-center mb-3">
+                      <div className="flex justify-between items-center mb-4">
                        {/* Чекбокс слева — занимает место дня недели */}
                         <div className="flex items-center gap-2">
                           <div
