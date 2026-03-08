@@ -236,6 +236,44 @@ class TestDutyRepository:
 
         assert count1 == count2
 
+    def test_bulk_delete_by_id(self, repository, duty_days):
+        """Test bulk delete removes duties and returns correct count"""
+        ids = [duty_days[0].id, duty_days[1].id]
+        initial_count = Duty.objects.count()
+
+        deleted = repository.bulk_delete_by_id(ids)
+
+        assert deleted == len(ids)
+        assert Duty.objects.count() == initial_count - len(ids)
+
+    def test_bulk_delete_by_id_empty_list(self, repository, duty_days):
+        """Test bulk delete with empty list returns None and does not change DB"""
+        initial_count = Duty.objects.count()
+
+        deleted = repository.bulk_delete_by_id([])
+
+        assert deleted is None
+        assert Duty.objects.count() == initial_count
+
+    def test_bulk_delete_by_id_nonexistent(self, repository):
+        """Test bulk delete with non-existent ids returns None"""
+        deleted = repository.bulk_delete_by_id([99999, 99998])
+
+        assert deleted is None
+
+    def test_bulk_delete_by_id_cascades_assignments(
+        self, repository, duty_with_assignments
+    ):
+        """Test that bulk delete of duties also removes related DutyAssignment records"""
+        duty = duty_with_assignments["duty"]
+        assignments_count = DutyAssignment.objects.count()
+
+        repository.bulk_delete_by_id([duty.id])
+
+        # All assignments for that duty should be gone (cascade)
+        assert DutyAssignment.objects.count() == 0
+        assert assignments_count == 2
+
 
 @pytest.mark.django_db
 class TestDutyAssignmentRepository:
@@ -309,3 +347,64 @@ class TestDutyAssignmentRepository:
         """Test deleting assignment"""
         repository.delete(duty_assignment.id)
         assert DutyAssignment.objects.count() == 0
+
+    def test_get_duty_stats(self, repository, duty_assignments, date_range):
+        """Test get_duty_stats returns correct aggregated stats"""
+        result = list(repository.get_duty_stats(date_range["start"], date_range["end"]))
+
+        assert len(result) > 0
+        # Each row must contain required keys
+        for row in result:
+            assert "user_id" in row
+            assert "month" in row
+            assert "duty_count" in row
+
+    def test_get_duty_stats_empty(self, repository, date_range):
+        """Test get_duty_stats returns empty queryset when no assignments exist"""
+        result = list(repository.get_duty_stats(date_range["start"], date_range["end"]))
+
+        assert result == []
+
+    def test_get_duty_stats_groups_by_user_and_month(
+        self, repository, staff_users, today
+    ):
+        """Test that get_duty_stats groups correctly by user and month"""
+        from datetime import timedelta
+        from planner.models import Duty, DutyAssignment
+
+        # Create duties in two different months
+        month1_date = today.replace(day=1)
+        if month1_date.month == 12:
+            month2_date = month1_date.replace(year=month1_date.year + 1, month=1)
+        else:
+            month2_date = month1_date.replace(month=month1_date.month + 1)
+
+        duty1 = Duty.objects.create(date=month1_date)
+        duty2 = Duty.objects.create(date=month1_date + timedelta(days=1))
+        duty3 = Duty.objects.create(date=month2_date)
+
+        user = staff_users[0]
+        DutyAssignment.objects.create(user=user, duty=duty1)
+        DutyAssignment.objects.create(user=user, duty=duty2)
+        DutyAssignment.objects.create(user=user, duty=duty3)
+
+        # Query over both months
+        if month1_date.month == 12:
+            end_date = month2_date.replace(day=28)
+        else:
+            end_date = month2_date.replace(day=28)
+
+        result = list(repository.get_duty_stats(month1_date, end_date))
+
+        # Should have two rows for the same user (one per month)
+        user_rows = [r for r in result if r["user_id"] == user.id]
+        assert len(user_rows) == 2
+        months = [r["month"].month for r in user_rows]
+        assert month1_date.month in months
+        assert month2_date.month in months
+        # Month 1 has 2 duties
+        month1_row = next(r for r in user_rows if r["month"].month == month1_date.month)
+        assert month1_row["duty_count"] == 2
+        # Month 2 has 1 duty
+        month2_row = next(r for r in user_rows if r["month"].month == month2_date.month)
+        assert month2_row["duty_count"] == 1

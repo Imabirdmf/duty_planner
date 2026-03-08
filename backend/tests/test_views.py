@@ -67,6 +67,41 @@ class TestStaffViewSet:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_stats_action(self, api_client, duty_assignments, date_range):
+        """Test stats action returns 200 and correct structure"""
+        params = {
+            "start_date": date_range["start"].isoformat(),
+            "end_date": date_range["end"].isoformat(),
+        }
+        response = api_client.get("/api/users/stats/", params)
+
+        assert response.status_code == status.HTTP_200_OK
+        # Response is a list of {"user": id, "duties": [...]}
+        assert isinstance(response.data, list)
+        for item in response.data:
+            assert "user" in item
+            assert "duties" in item
+            for duty_info in item["duties"]:
+                assert "month" in duty_info
+                assert "duty_count" in duty_info
+
+    def test_stats_action_missing_params(self, api_client):
+        """Test stats action without required params returns 400"""
+        response = api_client.get("/api/users/stats/")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_stats_action_empty(self, api_client, date_range):
+        """Test stats action with no assignments in range returns empty list"""
+        params = {
+            "start_date": date_range["start"].isoformat(),
+            "end_date": date_range["end"].isoformat(),
+        }
+        response = api_client.get("/api/users/stats/", params)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == []
+
 
 @pytest.mark.django_db
 class TestDaysOffViewSet:
@@ -291,6 +326,62 @@ class TestDutyAssignmentViewSet:
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert DutyAssignment.objects.count() == 0
+
+
+@pytest.mark.django_db
+class TestDutyViewSet:
+    """Tests for DutyViewSet"""
+
+    def test_bulk_delete_duties(self, api_client, duty_days, duty_assignments):
+        """Test successful bulk deletion of multiple duties and their cascade assignments"""
+        ids_to_delete = [duty_days[0].id, duty_days[1].id]
+
+        initial_duty_count = Duty.objects.count()
+        initial_assignment_count = DutyAssignment.objects.count()
+
+        response = api_client.post(
+            "/api/duties/bulk_delete/", {"duty_ids": ids_to_delete}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["deleted_duty_count"] == len(ids_to_delete)
+        assert Duty.objects.count() == initial_duty_count - len(ids_to_delete)
+        # Cascade: DutyAssignment records for deleted duties are also removed
+        assert DutyAssignment.objects.count() < initial_assignment_count
+
+    def test_bulk_delete_duties_empty_list(self, api_client):
+        """Test bulk delete with empty duty_ids list — serializer allows empty, returns 200"""
+        response = api_client.post(
+            "/api/duties/bulk_delete/", {"duty_ids": []}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        # No duties deleted, count is None since queryset returned empty dict
+        assert response.data["deleted_duty_count"] is None
+
+    def test_bulk_delete_duties_nonexistent_ids(self, api_client):
+        """Test bulk delete with non-existent duty ids — returns 200 with count 0 or None"""
+        response = api_client.post(
+            "/api/duties/bulk_delete/", {"duty_ids": [99999, 99998]}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["deleted_duty_count"] is None
+
+    def test_bulk_delete_duties_partial_ids(self, api_client, duty_days):
+        """Test bulk delete where some ids exist and some don't — only existing are deleted"""
+        existing_id = duty_days[0].id
+        nonexistent_id = 99999
+
+        response = api_client.post(
+            "/api/duties/bulk_delete/",
+            {"duty_ids": [existing_id, nonexistent_id]},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["deleted_duty_count"] == 1
+        assert not Duty.objects.filter(id=existing_id).exists()
 
 
 @pytest.mark.django_db

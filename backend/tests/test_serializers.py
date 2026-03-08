@@ -12,6 +12,7 @@ from planner.serializers import (
     DutyAssignmentChangeSerializer,
     DutyAssignmentGenerateSerializer,
     DutyAssignmentSerializer,
+    DutyIdsSerializer,
     DutyWithAssignmentsSerializer,
     StaffSerializer,
 )
@@ -407,3 +408,33 @@ class TestDutyWithAssignmentsSerializer:
         expected_ids = [u.id for u in expected_users]
 
         assert set(user_ids) == set(expected_ids)
+
+
+@pytest.mark.django_db
+class TestDutyIdsSerializer:
+    """Тесты для DutyIdsSerializer"""
+
+    def test_valid_data(self):
+        """Тест что список целых чисел в duty_ids валиден"""
+        data = {"duty_ids": [1, 2, 3]}
+        serializer = DutyIdsSerializer(data=data)
+
+        assert serializer.is_valid()
+        assert serializer.validated_data["duty_ids"] == [1, 2, 3]
+
+    def test_empty_list(self):
+        """Тест что пустой список duty_ids разрешён сериализатором"""
+        data = {"duty_ids": []}
+        serializer = DutyIdsSerializer(data=data)
+
+        # ListField по умолчанию разрешает пустые списки (allow_empty=True)
+        assert serializer.is_valid()
+        assert serializer.validated_data["duty_ids"] == []
+
+    def test_invalid_type(self):
+        """Тест что строки вместо int в duty_ids не валидны"""
+        data = {"duty_ids": ["abc", "def"]}
+        serializer = DutyIdsSerializer(data=data)
+
+        assert not serializer.is_valid()
+        assert "duty_ids" in serializer.errors
