@@ -796,7 +796,7 @@ const App = () => {
           ) : (
             <div className="relative">
               {/* Кнопки появляются при наличии выделения */}
-              <div className={`flex items-center justify-end gap-2 my-4 transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+              <div className={`flex items-center justify-end gap-2 my-4 h-[32px] transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                 <span className="text-[10px] font-black text-slate-400 uppercase">
                   {selectedDuties.size} selected
                 </span>
@@ -825,10 +825,10 @@ const App = () => {
                       onClick={() => dutyId && handleDutyClick(dutyId)}
                       className={`group p-4 bg-white rounded-2xl shadow-sm transition-all relative overflow-visible cursor-pointer ${
                         isHighlighted
-                          ? "border-2 border-red-500 ring-2 ring-red-200 animate-pulse"
+                          ? "border-red-500 ring-2 ring-red-200 animate-pulse"
                           : isSelected
-                          ? "border-2 border-blue-400 ring-2 ring-blue-100 bg-blue-50/40"
-                          : "border border-slate-100 hover:border-slate-200 hover:shadow-md"
+                          ? "border-blue-400 ring-2 ring-blue-100 bg-blue-50/40"
+                          : "border-transparent hover:border-slate-200 hover:shadow-md"
                       }`}
                     >
                       <div className="flex justify-between items-center mb-4">
