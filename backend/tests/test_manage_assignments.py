@@ -157,15 +157,22 @@ class TestManageAssignments:
         assert deleted == len(ids)
         assert Duty.objects.count() == initial_count - len(ids)
 
-    def test_bulk_delete_duties_by_id_cascade(self, service, duty_assignments, duty_days):
+    def test_bulk_delete_duties_by_id_cascade(
+        self, service, duty_assignments, duty_days
+    ):
         """Test that deleting duties cascade-removes their DutyAssignments"""
         ids = [duty_days[0].id]
         assignment_count_before = DutyAssignment.objects.count()
 
-        assignments_for_duty = DutyAssignment.objects.filter(duty_id=duty_days[0].id).count()
+        assignments_for_duty = DutyAssignment.objects.filter(
+            duty_id=duty_days[0].id
+        ).count()
         service.bulk_delete_duties_by_id(ids)
 
-        assert DutyAssignment.objects.count() == assignment_count_before - assignments_for_duty
+        assert (
+            DutyAssignment.objects.count()
+            == assignment_count_before - assignments_for_duty
+        )
 
     def test_bulk_delete_duties_by_id_empty(self, service, duty_days):
         """Test bulk delete with empty list returns None and leaves DB unchanged"""
@@ -197,7 +204,9 @@ class TestManageAssignments:
 
     def test_make_assignment_create(self, service, staff_user, duty_day):
         """Test make_assignment creates assignment when prev is None and new is set"""
-        service.make_assignment(duty_day.date, prev_user_id=None, new_user_id=staff_user.id)
+        service.make_assignment(
+            duty_day.date, prev_user_id=None, new_user_id=staff_user.id
+        )
 
         assert DutyAssignment.objects.filter(user=staff_user, duty=duty_day).exists()
 
@@ -206,7 +215,11 @@ class TestManageAssignments:
         prev_user = duty_assignment.user
         new_user = staff_users[1]
 
-        service.make_assignment(duty_assignment.duty.date, prev_user_id=prev_user.id, new_user_id=new_user.id)
+        service.make_assignment(
+            duty_assignment.duty.date,
+            prev_user_id=prev_user.id,
+            new_user_id=new_user.id,
+        )
 
         duty_assignment.refresh_from_db()
         assert duty_assignment.user.id == new_user.id

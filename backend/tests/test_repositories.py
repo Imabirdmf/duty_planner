@@ -261,7 +261,9 @@ class TestDutyRepository:
 
         assert deleted is None
 
-    def test_bulk_delete_by_id_cascades_assignments(self, repository, duty_with_assignments):
+    def test_bulk_delete_by_id_cascades_assignments(
+        self, repository, duty_with_assignments
+    ):
         """Test that bulk delete of duties also removes related DutyAssignment records"""
         duty = duty_with_assignments["duty"]
         assignments_count = DutyAssignment.objects.count()
@@ -348,9 +350,7 @@ class TestDutyAssignmentRepository:
 
     def test_get_duty_stats(self, repository, duty_assignments, date_range):
         """Test get_duty_stats returns correct aggregated stats"""
-        result = list(
-            repository.get_duty_stats(date_range["start"], date_range["end"])
-        )
+        result = list(repository.get_duty_stats(date_range["start"], date_range["end"]))
 
         assert len(result) > 0
         # Each row must contain required keys
@@ -361,13 +361,13 @@ class TestDutyAssignmentRepository:
 
     def test_get_duty_stats_empty(self, repository, date_range):
         """Test get_duty_stats returns empty queryset when no assignments exist"""
-        result = list(
-            repository.get_duty_stats(date_range["start"], date_range["end"])
-        )
+        result = list(repository.get_duty_stats(date_range["start"], date_range["end"]))
 
         assert result == []
 
-    def test_get_duty_stats_groups_by_user_and_month(self, repository, staff_users, today):
+    def test_get_duty_stats_groups_by_user_and_month(
+        self, repository, staff_users, today
+    ):
         """Test that get_duty_stats groups correctly by user and month"""
         from datetime import timedelta
         from planner.models import Duty, DutyAssignment
@@ -394,9 +394,7 @@ class TestDutyAssignmentRepository:
         else:
             end_date = month2_date.replace(day=28)
 
-        result = list(
-            repository.get_duty_stats(month1_date, end_date)
-        )
+        result = list(repository.get_duty_stats(month1_date, end_date))
 
         # Should have two rows for the same user (one per month)
         user_rows = [r for r in result if r["user_id"] == user.id]
