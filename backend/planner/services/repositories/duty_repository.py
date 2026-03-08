@@ -43,5 +43,5 @@ class DutyRepository(BaseRepository[Duty]):
 
     def bulk_delete_by_id(self, ids: list[int]):
         _, deleted_count = Duty.objects.filter(id__in=ids).delete()
-        logger.info("to delete", deleted_count)
+        logger.info("to delete %s", deleted_count)
         return deleted_count.get("planner.Duty", None)
