@@ -165,10 +165,6 @@ class DutyAssignmentViewSet(BaseAssignmentViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-
-class DutyViewSet(BaseAssignmentViewSet):
-    serializer_class = DutyIdsSerializer
-
     @action(detail=False, methods=["post"])
     def bulk_delete(self, request):
         logger.info("request.data: %s", request.data)

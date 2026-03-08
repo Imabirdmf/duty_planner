@@ -344,7 +344,7 @@ const App = () => {
   const fetchTimetable = useCallback(async () => {
     const { startDate, endDate } = getMonthRange(currentMonth);
     try {
-      const res = await api.get("/duty-assignments/list_assignments/", {
+      const res = await api.get("/duties/list_assignments/", {
         params: { start_date: startDate, end_date: endDate },
       });
       const items = res.data?.data || res.data;
@@ -393,7 +393,7 @@ const App = () => {
     setActiveAddUserPopover(null);
     try {
       await api.post(
-        "/duty-assignments/assign/",
+        "/duties/assign/",
         { user_id_prev: oldId, user_id_new: newId, date },
         { params: { start_date: startDate, end_date: endDate } }
       );
@@ -461,7 +461,7 @@ const App = () => {
     setHighlightedDates(new Set());
     setSelectedDutyDays([]);
     try {
-      const res = await api.post("/duty-assignments/generate/", {
+      const res = await api.post("/duties/generate/", {
         month: currentMonth,
         people_per_day: Number.parseInt(shiftSize, 10),
         dates: selectedDutyDays,

@@ -20,7 +20,6 @@ from django.urls import include, path
 from planner.views import (
     DaysOffViewSet,
     DutyAssignmentViewSet,
-    DutyViewSet,
     StaffViewSet,
 )
 from rest_framework.routers import DefaultRouter
@@ -28,8 +27,7 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register("users", StaffViewSet, basename="users")
 router.register("days-off", DaysOffViewSet, basename="days-off")
-router.register("duties", DutyViewSet, basename="duties")
-router.register("duty-assignments", DutyAssignmentViewSet, basename="duty-assignments")
+router.register("duties", DutyAssignmentViewSet, basename="duty-assignments")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
