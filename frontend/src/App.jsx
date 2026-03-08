@@ -796,25 +796,23 @@ const App = () => {
           ) : (
             <div className="relative">
               {/* Кнопки появляются при наличии выделения */}
-              {selectedDuties.size > 0 && (
-                <div className="flex items-center justify-end gap-2 mb-3">
-                  <span className="text-[10px] font-black text-slate-400 uppercase">
-                    {selectedDuties.size} selected
-                  </span>
-                 <button
-                    onClick={selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? handleDeselectAll : handleSelectAll}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-                  >
-                    {selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? "Deselect All" : "Select All"}
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
+              <div className={`flex items-center justify-end gap-2 mb-3 transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                <span className="text-[10px] font-black text-slate-400 uppercase">
+                  {selectedDuties.size} selected
+                </span>
+                <button
+                  onClick={selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? handleDeselectAll : handleSelectAll}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  {selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? "Deselect All" : "Select All"}
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {displayDates.map((date) => {
                   const assigned = timetable[date]?.users || [];
@@ -822,21 +820,39 @@ const App = () => {
                   const isHighlighted = highlightedDates.has(date);
                   const isSelected = dutyId && selectedDuties.has(dutyId);
                   return (
-                    <div
+                      <div
                       key={date}
                       onClick={() => dutyId && handleDutyClick(dutyId)}
-                      className={`p-4 bg-white rounded-2xl shadow-sm transition-all relative overflow-visible cursor-pointer ${
+                      className={`group p-4 bg-white rounded-2xl shadow-sm transition-all relative overflow-visible cursor-pointer ${
                         isHighlighted
                           ? "border-2 border-red-500 ring-2 ring-red-200 animate-pulse"
                           : isSelected
-                          ? "border-2 border-red-300 ring-2 ring-red-100 bg-red-50"
-                          : "border border-slate-100 hover:shadow-md"
+                          ? "border-2 border-blue-400 ring-2 ring-blue-100 bg-blue-50/40"
+                          : "border border-slate-100 hover:border-slate-200 hover:shadow-md"
                       }`}
                     >
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-[10px] font-black text-blue-600 uppercase">
-                          {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
-                        </span>
+                       {/* Чекбокс слева — занимает место дня недели */}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all
+                              ${isSelected
+                                ? "bg-blue-500 border-blue-500"
+                                : "bg-white border-slate-200 opacity-0 group-hover:opacity-100"
+                              }`}
+                            onClick={(e) => { e.stopPropagation(); dutyId && handleDutyClick(dutyId); }}
+                          >
+                            {isSelected && (
+                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-black text-blue-600 uppercase">
+                            {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
+                          </span>
+                        </div>
+                        {/* Правая часть — дата и кнопки без изменений */}
                         <div className="flex items-center gap-2">
                           {isHighlighted && <AlertCircle size={14} className="text-red-500" />}
                           <span className="text-xs font-black text-slate-700">
