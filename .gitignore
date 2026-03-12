@@ -8,3 +8,4 @@ dist/
 build/
 .env
 *.db
+backend/core/.DS_Store

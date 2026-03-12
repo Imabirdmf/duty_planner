@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_PROJECT_ENVIRONMENT="/usr/local" \
-    DJANGO_SETTINGS_MODULE=core.settings \
+    DJANGO_SETTINGS_MODULE=core.settings.production \
     PATH="/root/.local/bin:/usr/local/bin:$PATH"
 
 WORKDIR /app

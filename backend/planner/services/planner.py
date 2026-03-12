@@ -66,39 +66,38 @@ class Planner:
         logger.info("duties for month: %s", duties_for_month)
         staff_availability = StaffAvailability()
 
-        with transaction.atomic():  # убрать
-            staff = self.staff_repo.get_all()
-            users = [(user.priority, user.id) for user in staff]
-            shuffle(users)
-            heapq.heapify(users)
-            logger.info(self.people_for_day)
-            logger.info("users before generation: %s", users)
-            for duty in duties_for_month:
+        staff = self.staff_repo.get_all()
+        users = [(user.priority, user.id) for user in staff]
+        shuffle(users)
+        heapq.heapify(users)
+        logger.info(self.people_for_day)
+        logger.info("users before generation: %s", users)
+        for duty in duties_for_month:
 
-                logger.info("duty day: %s", duty.date)
-                count = self.duty_assignment_repo.get_count_by_duty_id(duty.id)
-                logger.info("count for day: %s", count)
-                added_users = []
-                while users and count < self.people_for_day:
+            logger.info("duty day: %s", duty.date)
+            count = self.duty_assignment_repo.get_count_by_duty_id(duty.id)
+            logger.info("count for day: %s", count)
+            added_users = []
+            while users and count < self.people_for_day:
 
-                    user_priority, user_id = heapq.heappop(users)
-                    logger.info("chosen: %s", (user_priority, user_id))
-                    if not staff_availability.is_unavailable(user_id, duty.date):
-                        self.duty_assignment_repo.create(user_id=user_id, duty=duty)
-                        count += 1
-                        added_users.append((user_priority + 1, user_id))
-                        logger.info("added assignment: %s", (user_priority, user_id))
-                    else:
-                        added_users.append((user_priority, user_id))
-                        logger.info(
-                            "not added assignment: %s", (user_priority, user_id)
-                        )
+                user_priority, user_id = heapq.heappop(users)
+                logger.info("chosen: %s", (user_priority, user_id))
+                if not staff_availability.is_unavailable(user_id, duty.date):
+                    self.duty_assignment_repo.create(user_id=user_id, duty=duty)
+                    count += 1
+                    added_users.append((user_priority + 1, user_id))
+                    logger.info("added assignment: %s", (user_priority, user_id))
+                else:
+                    added_users.append((user_priority, user_id))
+                    logger.info(
+                        "not added assignment: %s", (user_priority, user_id)
+                    )
 
-                for user in added_users:
-                    heapq.heappush(users, user)
-                logger.info("heap after assignment: %s", users)
-                self.save_messages(count, duty)
+            for user in added_users:
+                heapq.heappush(users, user)
+            logger.info("heap after assignment: %s", users)
+            self.save_messages(count, duty)
 
-            for user_priority, user_id in users:
-                self.update_priority(user_id, value=user_priority)
+        for user_priority, user_id in users:
+            self.update_priority(user_id, value=user_priority)
         return self.messages
