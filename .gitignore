@@ -9,3 +9,4 @@ build/
 .env
 *.db
 backend/core/.DS_Store
+*/.DS_Store

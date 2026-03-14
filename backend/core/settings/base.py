@@ -11,16 +11,16 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
-
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -56,24 +56,22 @@ APPEND_SLASH = True
 
 # Application definition
 
-AUTH_USER_MODEL = 'accounts.User'
+AUTH_USER_MODEL = "accounts.User"
 
 SITE_ID = 1
 
-ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 
 REST_AUTH = {
-    'REGISTER_SERIALIZER': 'accounts.serializers.EmailRegisterSerializer',
-    'USE_JWT': True,
-    'JWT_AUTH_HTTPONLY': True,
+    "REGISTER_SERIALIZER": "accounts.serializers.EmailRegisterSerializer",
+    "USE_JWT": True,
+    "JWT_AUTH_HTTPONLY": True,
 }
 
-from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
 }
 
 INSTALLED_APPS = [
@@ -87,10 +85,12 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "planner",
     "accounts",
+    "invitations",
     "corsheaders",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "dj_rest_auth",
     "dj_rest_auth.registration",
 ]
@@ -109,6 +109,27 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "core.urls"
+
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "FETCH_USERINFO": True,
+    }
+}
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_REQUIRED = False
+
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.InvitationSocialAccountAdapter"
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8000")
+LOGIN_REDIRECT_URL = "/auth/complete/"
 
 TEMPLATES = [
     {
@@ -140,11 +161,7 @@ REST_FRAMEWORK = {
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
-    )
-}
+DATABASES = {"default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))}
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -163,6 +180,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+INVITATIONS_INVITATION_ONLY = True
+INVITATIONS_ALLOW_JSON_INVITES = True
+INVITATIONS_ADAPTER = "invitations.adapters.BaseInvitationsAdapter"
+INVITATIONS_INVITATION_MODEL = "invitations.Invitation"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
