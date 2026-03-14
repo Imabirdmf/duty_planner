@@ -128,7 +128,7 @@ SOCIALACCOUNT_EMAIL_REQUIRED = False
 
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.InvitationSocialAccountAdapter"
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 LOGIN_REDIRECT_URL = "/auth/complete/"
 
 TEMPLATES = [

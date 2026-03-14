@@ -15,6 +15,9 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DaysOffPicker } from "./DaysOffPicker";
 import { ScheduleDatePicker } from "./ScheduleDatePicker";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AuthCallback from "./AuthCallback";
+import Login from "./Login";
 
 const API_URL = import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -232,7 +235,32 @@ const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
 }
 
 const App = () => {
-  // currentMonth — стейт, задаёт какой месяц показывать в расписании
+  const [accessToken, setAccessToken] = useState(
+    sessionStorage.getItem("access_token")
+  );
+
+  const handleAuth = (access, refresh) => {
+    sessionStorage.setItem("access_token", access);
+    setAccessToken(access);
+  };
+
+    return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback onAuth={handleAuth} />} />
+      <Route path="/" element={
+        accessToken
+          ? <MainApp accessToken={accessToken} />
+          : <Navigate to="/login" replace />
+      } />
+    </Routes>
+  );
+};
+
+const MainApp = ({ accessToken }) => {
+  useEffect(() => {
+    api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+  }, [accessToken]);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [vacationMonth, setVacationMonth] = useState(new Date().toISOString().slice(0, 7));
   const [staffTab, setStaffTab] = useState("staff"); // "staff" | "analytics"

@@ -10,6 +10,9 @@ Invitation = get_invitation_model()
 
 class InvitationSocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_open_for_signup(self, request, sociallogin):
+        if sociallogin.is_existing:
+            return True
+
         invite_token = request.session.get("invitation_token")
         if not invite_token:
             raise SignupClosedException()
