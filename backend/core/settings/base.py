@@ -83,6 +83,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = "core.urls"
 
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
@@ -151,7 +152,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 CSRF_TRUSTED_ORIGINS = [
     "https://dutyplannerfrontend-production.up.railway.app",
     "https://dutyplannerbackend.railway.internal",
-    "https://dutyplannerfrontend-staging.up.railway.app",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
