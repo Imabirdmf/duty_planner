@@ -26,6 +26,8 @@ jobs:
         run: |
           make lint
       - name: Run test coverage
+        env:
+          DATABASE_URL: sqlite:///./ci.sqlite3
         run: |
           make test-coverage
       - name: Analyze with SonarQube
