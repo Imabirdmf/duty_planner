@@ -28,6 +28,7 @@ jobs:
       - name: Run test coverage
         env:
           DATABASE_URL: sqlite:///./ci.sqlite3
+          SECRET_KEY: 'ci-test-secret-key'
         run: |
           make test-coverage
       - name: Analyze with SonarQube
