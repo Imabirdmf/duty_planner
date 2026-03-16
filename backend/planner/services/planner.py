@@ -89,9 +89,7 @@ class Planner:
                     logger.info("added assignment: %s", (user_priority, user_id))
                 else:
                     added_users.append((user_priority, user_id))
-                    logger.info(
-                        "not added assignment: %s", (user_priority, user_id)
-                    )
+                    logger.info("not added assignment: %s", (user_priority, user_id))
 
             for user in added_users:
                 heapq.heappush(users, user)

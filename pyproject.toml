@@ -44,6 +44,6 @@ disable_error_code = 'var-annotated'
 
 [tool.ruff]
 line-length = 120
-exclude = ["__init__.py", "backend/tests/"]
+exclude = ["__init__.py", "backend/tests/", "*/migrations"]
 preview = true
 lint.select = ["E", "F", "I", "C90"]
