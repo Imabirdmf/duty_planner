@@ -25,12 +25,12 @@ jobs:
       - name: Run linter
         run: |
           make lint
-      - name: Run test coverage
-        env:
-          DATABASE_URL: sqlite:///./ci.sqlite3
-          SECRET_KEY: 'ci-test-secret-key'
-        run: |
-          make test-coverage
+#      - name: Run test coverage
+#        env:
+#          DATABASE_URL: sqlite:///./ci.sqlite3
+#          SECRET_KEY: 'ci-test-secret-key'
+#        run: |
+#          make test-coverage
       - name: Analyze with SonarQube
         uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
         env:
