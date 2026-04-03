@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   AlertCircle,
   BarChart2,
@@ -6,6 +5,8 @@ import {
   ChevronRight,
   ClipboardList,
   Info,
+  LogIn,
+  LogOut,
   Play,
   RotateCcw,
   UserPlus,
@@ -13,16 +14,10 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import api from "./api/api.js";
 import { DaysOffPicker } from "./DaysOffPicker";
 import { ScheduleDatePicker } from "./ScheduleDatePicker";
-
-const API_URL = import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-const api = axios.create({
-  baseURL: `${API_URL}/api`,
-  headers: { "Content-Type": "application/json" },
-  timeout: 5000,
-});
+import { useAuth } from "./useAuth.js";
 
 const MONTH_COLORS = [
   "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",
@@ -33,8 +28,101 @@ const MONTH_COLORS = [
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const toMonthLabel = (m) => MONTH_NAMES[(Number(m) - 1) % 12] ?? String(m);
 
+// ── Login Page ────────────────────────────────────────────────────────────────
+const LoginPage = ({ onLogin, modal = false }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    try {
+      await onLogin(email, password);
+    } catch (err) {
+      const data = err.response?.data;
+      setError(
+        data?.non_field_errors?.[0] ||
+        data?.detail ||
+        "Invalid email or password"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className={modal ? "w-full max-w-sm" : "min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4"}>
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-black text-slate-800">
+            Duty<span className="text-blue-600">Planner</span>
+          </h1>
+          <p className="text-sm text-slate-400 font-medium mt-1">Sign in to manage the schedule</p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold flex items-center gap-2">
+              <AlertCircle size={14} className="flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                placeholder="you@example.com"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-40 shadow-xl shadow-slate-200 mt-2"
+            >
+              {isLoading ? (
+                "Signing in…"
+              ) : (
+                <>
+                  <LogIn size={14} /> Sign In
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+    </div>
+  );
+};
+
 // Response: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
-const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
+const DutyAnalyticsTab = ({ rows, months, loading, error, users }) => {
   const [hoveredRow, setHoveredRow] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
   const [visible, setVisible] = useState(false);
@@ -118,12 +206,11 @@ const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
     <div className="py-20 text-center text-red-500 font-bold text-[10px] uppercase">{error}</div>
   );
   if (!rows.length) return (
-    <div className="py-20 text-center text-slate-300 font-bold text-sm">Нет данных</div>
+    <div className="py-20 text-center text-slate-300 font-bold text-sm">No data</div>
   );
 
   return (
     <div className="overflow-visible px-2 pb-2 relative">
-        {/*Legend */}
       {months.length > 0 && !loading && (
         <div className="absolute top-0 right-16 bg-white">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-slate-600">
@@ -232,6 +319,8 @@ const DutyAnalyticsTab = ({ rows, months, loading, error }) => {
 }
 
 const App = () => {
+  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
   // currentMonth — стейт, задаёт какой месяц показывать в расписании
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [vacationMonth, setVacationMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -252,7 +341,7 @@ const App = () => {
   const [analyticsRefresh, setAnalyticsRefresh] = useState(0);
   const [analyticsRows, setAnalyticsRows] = useState([]);
   const [analyticsMonths, setAnalyticsMonths] = useState([]);
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState(null);
 
   const [selectedDuties, setSelectedDuties] = useState(new Set()); // Set<duty_id>
@@ -289,7 +378,7 @@ const App = () => {
   const fetchUsers = useCallback(async () => {
     try {
       const res = await api.get("/users/");
-      setUsers(res.data);
+      setUsers(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError("Failed to load users");
     }
@@ -363,21 +452,14 @@ const App = () => {
     }
   }, [currentMonth]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  useEffect(() => { fetchUsers(); }, []);
   useEffect(() => {
     if (users.length > 0 && shiftSize > users.length) setShiftSize(users.length);
   }, [users, shiftSize]);
-  useEffect(() => {
-    fetchVacations();
-  }, [vacationMonth]);
-  useEffect(() => {
-    fetchAnalytics();
+  useEffect(() => { fetchVacations();}, [vacationMonth]);
+  useEffect(() => { fetchAnalytics();
   }, [users, analyticsRefresh]);
-  useEffect(() => {
-    fetchTimetable();
-  }, [currentMonth]);
+  useEffect(() => { fetchTimetable();}, [currentMonth]);
 
   // Когда меняются selectedDutyDays — синхронизируем currentMonth
   useEffect(() => {
@@ -518,6 +600,21 @@ const App = () => {
     (a, b) => new Date(a) - new Date(b)
   );
 
+
+    // ── Auth states ──────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="text-slate-400 font-bold text-sm animate-pulse">Loading…</div>
+      </div>
+    );
+  }
+
+  // if (!isAuthenticated) {
+  //   return <LoginPage onLogin={login} />;
+  // }
+
+  // ── Main UI ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -586,9 +683,23 @@ const App = () => {
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
             Control Panel v2.1
           </div>
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                {user && <span className="text-[11px] font-bold text-slate-400 hidden sm:block">{user.email}</span>}
+                <button onClick={logout} className="flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border border-slate-100">
+                  <LogOut size={13} /> Sign Out
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowLogin(true)} className="flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border border-slate-100">
+                <LogIn size={13} /> Sign In
+              </button>
+            )}
+          </div>
         </header>
 
-        {/* ① Staff — full width */}
+        {/* ① Staff block — full width */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-visible">
           <div className="p-5 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
@@ -650,7 +761,7 @@ const App = () => {
           {/* Tab content */}
           <div style={{ minHeight: `${getContentHeight()}px` }}>
             {staffTab === "analytics" ? (
-              <DutyAnalyticsTab rows={analyticsRows} months={analyticsMonths} loading={analyticsLoading} error={analyticsError} />
+              <DutyAnalyticsTab rows={analyticsRows} months={analyticsMonths} loading={analyticsLoading} error={analyticsError} users={users}/>
             ) : (
             <div className="overflow-visible px-2 pb-2">
             <table className="w-full text-left border-separate border-spacing-y-0">
@@ -680,24 +791,28 @@ const App = () => {
                             >
                               {new Date(v.date).getDate()}{" "}
                               {new Date(v.date).toLocaleDateString("en-US", { month: "short" })}
-                              <button
-                                onClick={() => handleDeleteVacation(v.id)}
-                                className="text-slate-300 hover:text-red-500 cursor-pointer"
-                              >
-                                <X size={10} />
-                              </button>
+                              {isAuthenticated && (
+                                <button
+                                  onClick={() => handleDeleteVacation(v.id)}
+                                  className="text-slate-300 hover:text-red-500 cursor-pointer"
+                                >
+                                  <X size={10} />
+                                </button>
+                              )}
                             </div>
                           ))}
-                        <DaysOffPicker
-                          userId={u.id}
-                          onSuccess={fetchVacations}
-                          api={api}
-                          onError={setError}
-                          existingDates={vacations
-                            .filter((v) => v.user === u.id)
-                            .map((v) => v.date)}
-                          vacationMonth={vacationMonth}
-                        />
+                        {isAuthenticated && (  
+                          <DaysOffPicker
+                            userId={u.id}
+                            onSuccess={fetchVacations}
+                            api={api}
+                            onError={setError}
+                            existingDates={vacations
+                              .filter((v) => v.user === u.id)
+                              .map((v) => v.date)}
+                            vacationMonth={vacationMonth}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -719,100 +834,104 @@ const App = () => {
             </span>
           </div>
 
-          {/* Controls row */}
-          <div className="mt-10 mb-0">
-            <h2 className="text-sm font-bold text-slate-700 uppercase text-xs tracking-widest border-b border-slate-50 pb-4 mb-4 ">
-              Generation Parameters
-            </h2>
-            <div className="flex flex-wrap items-end justify-start gap-6 mb-0.5 pb-5 border-b border-slate-50">
-              {/* Period */}
-              <div className="flex flex-col items-center gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase">Period</label>
-                <ScheduleDatePicker
-                  selectedDates={selectedDutyDays}
-                  onChange={setSelectedDutyDays}
-                  currentMonth={currentMonth}
-                  onMonthChange={(ym) => {
-                    if (ym) setCurrentMonth(ym);
-                  }}
-                  existingDates={Object.keys(timetable)}
-                />
+          {!isAuthenticated && (
+            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit mt-6">
+              <button
+                onClick={() => setCurrentMonth(m => {
+                  const [year, month] = m.split("-").map(Number);
+                  const d = new Date(year, month - 2, 1);
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                })}
+                className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-[140px] text-center text-[11px] font-black uppercase text-slate-600 tracking-tight">
+                {currentMonthLabel}
               </div>
+              <button
+                onClick={() => setCurrentMonth(m => {
+                  const [year, month] = m.split("-").map(Number);
+                  const d = new Date(year, month, 1);
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                })}
+                className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Controls row - only for authenticated users*/}
+          {isAuthenticated && (
+            <div className="mt-10 mb-0">
+              <h2 className="text-sm font-bold text-slate-700 uppercase text-xs tracking-widest border-b border-slate-50 pb-4 mb-4">
+                Generation Parameters
+              </h2>
+              <div className="flex flex-wrap items-end justify-start gap-6 mb-0.5 pb-5 border-b border-slate-50">
+                <div className="flex flex-col items-center gap-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Period</label>
+                  <ScheduleDatePicker
+                    selectedDates={selectedDutyDays}
+                    onChange={setSelectedDutyDays}
+                    currentMonth={currentMonth}
+                    onMonthChange={(ym) => { if (ym) setCurrentMonth(ym); }}
+                    existingDates={Object.keys(timetable)}
+                  />
+                </div>
 
               {/* People per shift */}
               <div className="flex flex-col items-center gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase">
-                  People / Shift
-                </label>
-                <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-1 h-[38px]">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">People / Shift</label>
+                  <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-1 h-[38px]">
+                    <button onClick={() => setShiftSize(Math.max(1, shiftSize - 1))} className="p-2 text-slate-400 hover:text-blue-600 font-black cursor-pointer">−</button>
+                    <input type="number" value={shiftSize} readOnly className="w-10 bg-transparent border-0 text-center text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                    <button onClick={() => setShiftSize(Math.min(users.length || 99, shiftSize + 1))} className="p-2 text-slate-400 hover:text-blue-600 font-black cursor-pointer">+</button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase opacity-0 select-none">_</label>
                   <button
-                    onClick={() => setShiftSize(Math.max(1, shiftSize - 1))}
-                    className="p-2 text-slate-400 hover:text-blue-600 font-black cursor-pointer"
+                    onClick={handleGenerate}
+                    disabled={isDistributing || selectedDutyDays.length === 0}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-30 shadow-xl shadow-slate-200 cursor-pointer h-[38px]"
                   >
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    value={shiftSize}
-                    readOnly
-                    className="w-10 bg-transparent border-0 text-center text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                  <button
-                    onClick={() => setShiftSize(Math.min(users.length || 99, shiftSize + 1))}
-                    className="p-2 text-slate-400 hover:text-blue-600 font-black cursor-pointer"
-                  >
-                    +
+                    {isDistributing ? "Generating…" : (<><Play size={13} /> Generate Schedule</>)}
                   </button>
                 </div>
               </div>
-
-              {/* Generate */}
-              <div className="flex flex-col items-center gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase opacity-0 select-none">
-                  _
-                </label>
-                <button
-                  onClick={handleGenerate}
-                  disabled={isDistributing || selectedDutyDays.length === 0}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-30 shadow-xl shadow-slate-200 cursor-pointer h-[38px]"
-                >
-                  {isDistributing ? (
-                    "Generating…"
-                  ) : (
-                    <>
-                      <Play size={13} /> Generate Schedule
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
-          </div>
+          )}
 
           {/* Schedule grid */}
           {displayDates.length === 0 ? (
             <div className="py-16 text-center text-slate-300 font-bold text-sm">
-              Select a period above to see the schedule
+              {isAuthenticated ? "Select a period above to see the schedule" : "No schedule for this period"}
             </div>
           ) : (
             <div className="relative">
               {/* Кнопки появляются при наличии выделения */}
-              <div className={`flex items-center justify-end gap-2 my-4 h-[32px] transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <span className="text-[10px] font-black text-slate-400 uppercase">
-                  {selectedDuties.size} selected
-                </span>
-                <button
-                  onClick={selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? handleDeselectAll : handleSelectAll}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  {selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? "Deselect All" : "Select All"}
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  Delete
-                </button>
-              </div>
+              {isAuthenticated && (
+                <div className={`flex items-center justify-end gap-2 my-4 h-[32px] transition-opacity duration-150 ${selectedDuties.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                  <span className="text-[10px] font-black text-slate-400 uppercase">
+                    {selectedDuties.size} selected
+                  </span>
+                  <button
+                    onClick={selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? handleDeselectAll : handleSelectAll}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    {selectedDuties.size === Object.values(timetable).filter(v => v.dutyId).length ? "Deselect All" : "Select All"}
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {displayDates.map((date) => {
                   const assigned = timetable[date]?.users || [];
@@ -822,8 +941,8 @@ const App = () => {
                   return (
                       <div
                       key={date}
-                      onClick={() => dutyId && handleDutyClick(dutyId)}
-                      className={`group p-4 bg-white rounded-2xl shadow-sm transition-all relative overflow-visible cursor-pointer ${
+                      onClick={() => isAuthenticated && dutyId && handleDutyClick(dutyId)}
+                      className={`group p-4 bg-white rounded-2xl shadow-sm transition-all relative overflow-visible ${isAuthenticated ? "cursor-pointer" : "cursor-default"} ${
                         isHighlighted
                           ? "border-red-500 ring-2 ring-red-200 animate-pulse"
                           : isSelected
@@ -834,20 +953,22 @@ const App = () => {
                       <div className="flex justify-between items-center mb-4">
                        {/* Чекбокс слева — занимает место дня недели */}
                         <div className="flex items-center gap-2">
-                          <div
-                            className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all
-                              ${isSelected
-                                ? "bg-blue-500 border-blue-500"
-                                : "bg-white border-slate-200 opacity-0 group-hover:opacity-100"
-                              }`}
-                            onClick={(e) => { e.stopPropagation(); dutyId && handleDutyClick(dutyId); }}
-                          >
-                            {isSelected && (
-                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            )}
-                          </div>
+                          {isAuthenticated && (
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all
+                                ${isSelected
+                                  ? "bg-blue-500 border-blue-500"
+                                  : "bg-white border-slate-200 opacity-0 group-hover:opacity-100"
+                                }`}
+                              onClick={(e) => { e.stopPropagation(); dutyId && handleDutyClick(dutyId); }}
+                            >
+                              {isSelected && (
+                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                  <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                          )}
                           <span className="text-[10px] font-black text-blue-600 uppercase">
                             {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
                           </span>
@@ -859,35 +980,37 @@ const App = () => {
                             {new Date(date).getDate()}{" "}
                             {new Date(date).toLocaleDateString("en-US", { month: "short" })}
                           </span>
-                          <div
-                            className="relative"
-                            ref={activeAddUserPopover === date ? addUserRef : null}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() =>
-                                setActiveAddUserPopover(activeAddUserPopover === date ? null : date)
-                              }
-                              className={`p-1.5 rounded-lg cursor-pointer ${activeAddUserPopover === date ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-50"}`}
+                          {isAuthenticated && (
+                            <div
+                              className="relative"
+                              ref={activeAddUserPopover === date ? addUserRef : null}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <UserPlus size={14} />
-                            </button>
-                            {activeAddUserPopover === date && (
-                              <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] py-2">
-                                {users
-                                  .filter((usr) => !assigned.some((au) => au.id === usr.id))
-                                  .map((usr) => (
-                                    <button
-                                      key={usr.id}
-                                      onClick={() => handleAssignmentChange(date, null, usr.id)}
-                                      className="w-full text-left px-4 py-2 text-[11px] hover:bg-blue-50 font-bold text-slate-700 transition-colors cursor-pointer"
-                                    >
-                                      {usr.full_name || usr.name}
-                                    </button>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
+                              <button
+                                onClick={() =>
+                                  setActiveAddUserPopover(activeAddUserPopover === date ? null : date)
+                                }
+                                className={`p-1.5 rounded-lg cursor-pointer ${activeAddUserPopover === date ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-50"}`}
+                              >
+                                <UserPlus size={14} />
+                              </button>
+                              {activeAddUserPopover === date && (
+                                <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[100] py-2">
+                                  {users
+                                    .filter((usr) => !assigned.some((au) => au.id === usr.id))
+                                    .map((usr) => (
+                                      <button
+                                        key={usr.id}
+                                        onClick={() => handleAssignmentChange(date, null, usr.id)}
+                                        className="w-full text-left px-4 py-2 text-[11px] hover:bg-blue-50 font-bold text-slate-700 transition-colors cursor-pointer"
+                                      >
+                                        {usr.full_name || usr.name}
+                                      </button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -897,25 +1020,27 @@ const App = () => {
                             className="group relative flex items-center justify-between bg-slate-50 p-2.5 rounded-xl text-[11px] font-bold text-slate-600"
                           >
                             <span className="truncate pr-2">{u.name}</span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() =>
-                                  setActiveEditPopover(
-                                    activeEditPopover === `${date}-${u.id}` ? null : `${date}-${u.id}`
-                                  )
-                                }
-                                className="p-1 hover:bg-blue-100 rounded-md text-blue-400 cursor-pointer"
-                              >
-                                <RotateCcw size={12} />
-                              </button>
-                              <button
-                                onClick={() => handleAssignmentChange(date, u.id, null)}
-                                className="p-1 hover:bg-red-100 rounded-md text-red-400 cursor-pointer"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                            {activeEditPopover === `${date}-${u.id}` && (
+                            {isAuthenticated && (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() =>
+                                    setActiveEditPopover(
+                                      activeEditPopover === `${date}-${u.id}` ? null : `${date}-${u.id}`
+                                    )
+                                  }
+                                  className="p-1 hover:bg-blue-100 rounded-md text-blue-400 cursor-pointer"
+                                >
+                                  <RotateCcw size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleAssignmentChange(date, u.id, null)}
+                                  className="p-1 hover:bg-red-100 rounded-md text-red-400 cursor-pointer"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            )}
+                            {isAuthenticated && activeEditPopover === `${date}-${u.id}` && (
                               <div
                                 ref={editRef}
                                 className="absolute bottom-full left-0 w-full mb-1 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] py-1 max-h-48 overflow-y-auto"
@@ -949,6 +1074,16 @@ const App = () => {
           )}
         </div>
       </div>
+      {showLogin && !isAuthenticated && (
+        <div className="fixed inset-0 bg-black/40 z-[500] flex items-center justify-center p-4" onClick={() => setShowLogin(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <LoginPage modal onLogin={async (email, password) => {
+              await login(email, password);
+              setShowLogin(false);
+            }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

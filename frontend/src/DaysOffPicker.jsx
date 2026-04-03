@@ -297,6 +297,9 @@ export function DaysOffPicker({ userId, onSuccess, api, onError, existingDates =
         message = data.error;
       }
       onError?.(message);
+      setMultiDates([]);
+      setRangeStart(null);
+      setRangeEnd(null);
     } finally {
       setIsSubmitting(false);
     }

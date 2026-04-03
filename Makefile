@@ -15,3 +15,6 @@ check:
 
 test-coverage:
 	 uv run pytest --cov --cov-report=xml:coverage.xml --cov-config=.coveragerc --cov-branch
+
+migrations:
+	uv run backend/manage.py makemigrations

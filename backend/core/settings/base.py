@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import datetime
 import os
 from pathlib import Path
 
@@ -62,14 +63,23 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
     "rest_framework",
     "planner",
     "accounts",
     "corsheaders",
 ]
 
+SITE_ID = 1
+
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -83,10 +93,27 @@ MIDDLEWARE = [
 ROOT_URLCONF = "core.urls"
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+}
+
+REST_AUTH = {
+    "REGISTER_SERIALIZER": "accounts.serializers.EmailRegisterSerializer",
+    "USE_JWT": True,
+    "JWT_AUTH_COOKIE": "auth-token",  # имя куки для access токена
+    "JWT_AUTH_REFRESH_COOKIE": "refresh-token",  # имя куки для refresh токена
+    "JWT_AUTH_HTTPONLY": True,  # HttpOnly — JS не видит куки
+    "JWT_AUTH_SAMESITE": "Lax",  # защита от CSRF
+    "TOKEN_MODEL": None,
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=30),
 }
 
 TEMPLATES = [
@@ -129,6 +156,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/

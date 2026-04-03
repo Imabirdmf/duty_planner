@@ -29,4 +29,9 @@ router.register("users", StaffViewSet, basename="users")
 router.register("days-off", DaysOffViewSet, basename="days-off")
 router.register("duties", DutyAssignmentViewSet, basename="duty-assignments")
 
-urlpatterns = [path("admin/", admin.site.urls), path("api/", include(router.urls))]
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", include(router.urls)),
+    path("api/auth/", include("dj_rest_auth.urls")),
+    path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
+]

@@ -5,6 +5,7 @@ from django.db.models import QuerySet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .serializers import (
@@ -28,6 +29,12 @@ class BaseAssignmentViewSet(viewsets.ModelViewSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.assignments = ManageAssignments()
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve", "stats", "list_assignments"]:
+            return [AllowAny()]
+        else:
+            return [IsAuthenticated()]
 
 
 class StaffViewSet(BaseAssignmentViewSet):
