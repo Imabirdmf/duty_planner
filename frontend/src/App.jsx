@@ -138,7 +138,7 @@ const RegisterPage = ({ token, onSuccess }) => {
     setIsLoading(true);
     try {
       await api.post("/auth/registration/", { email, password1, password2, token });
-      onSuccess();
+      await onSuccess();
     } catch (err) {
       const data = err.response?.data;
       const knownError =
