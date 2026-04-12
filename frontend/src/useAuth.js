@@ -45,5 +45,5 @@ export function useAuth() {
     setIsAuthenticated(false);
   }, []);
 
-  return { user, isAuthenticated, isLoading, login, logout };
+  return { user, isAuthenticated, isLoading, login, logout, checkAuth };
 }

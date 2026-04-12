@@ -121,6 +121,110 @@ const LoginPage = ({ onLogin, modal = false }) => {
   );
 };
 
+const RegisterPage = ({ token, onSuccess }) => {
+  const [email, setEmail] = useState("");
+  const [password1, setPassword1] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (password1 !== password2) {
+      setError("Passwords do not match");
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
+    try {
+      await api.post("/auth/registration/", { email, password1, password2, token });
+      onSuccess();
+    } catch (err) {
+      const data = err.response?.data;
+      const knownError =
+        data?.token?.[0] ||
+        data?.email?.[0] ||
+        data?.password1?.[0] ||
+        data?.password2?.[0] ||
+        data?.non_field_errors?.[0] ||
+        data?.detail;
+
+      const fallbackError =
+        typeof data === "object" && data !== null
+          ? Object.values(data).flat().find((v) => typeof v === "string")
+          : null;
+
+      setError(knownError || fallbackError || "Registration failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-black text-slate-800">
+            Duty<span className="text-blue-600">Planner</span>
+          </h1>
+          <p className="text-sm text-slate-400 font-medium mt-1">Create your account</p>
+        </div>
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold flex items-center gap-2">
+              <AlertCircle size={14} className="flex-shrink-0" />
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                placeholder="you@example.com"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+              <input
+                type="password"
+                value={password1}
+                onChange={(e) => setPassword1(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Repeat Password</label>
+              <input
+                type="password"
+                value={password2}
+                onChange={(e) => setPassword2(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all disabled:opacity-40 shadow-xl shadow-slate-200 mt-2"
+            >
+              {isLoading ? "Creating account…" : (<><UserPlus size={14} /> Create Account</>)}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Response: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
 const DutyAnalyticsTab = ({ rows, months, loading, error, users }) => {
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -319,7 +423,9 @@ const DutyAnalyticsTab = ({ rows, months, loading, error, users }) => {
 }
 
 const App = () => {
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const params = new URLSearchParams(window.location.search);
+  const inviteToken = params.get("token");
+  const { user, isAuthenticated, isLoading, login, logout, checkAuth } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   // currentMonth — стейт, задаёт какой месяц показывать в расписании
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -610,10 +716,12 @@ const App = () => {
     );
   }
 
-  // if (!isAuthenticated) {
-  //   return <LoginPage onLogin={login} />;
-  // }
-
+  if (inviteToken) {
+    return <RegisterPage token={inviteToken} onSuccess={async () => {
+      await checkAuth();
+      window.location.href = "/";
+    }} />;
+}
   // ── Main UI ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 p-4 md:p-8">

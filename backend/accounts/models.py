@@ -1,8 +1,12 @@
 # from django.contrib.auth.base_user import BaseUserManager
+import uuid
+from datetime import timedelta
 from typing import Any
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.utils import timezone
 
 
 class CustomUserManager(BaseUserManager):
@@ -38,3 +42,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class Invitation(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="invitations"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        return timezone.now() < self.created_at + timedelta(hours=1)
+
+    def __str__(self):
+        return f"Invitation by {self.created_by.email} at {self.created_at}"
