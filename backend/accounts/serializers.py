@@ -1,13 +1,7 @@
-import logging
-
 from accounts.models import Invitation
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-
-logger = logging.getLogger(__name__)
-
-
 class EmailRegisterSerializer(RegisterSerializer):
     username = None
     token = serializers.UUIDField(required=True)
