@@ -56,7 +56,9 @@ LOGGING = {
             "level": "DEBUG",
             "propagate": False,
         },
-    },
+    }
+    if DEBUG
+    else {},
 }
 
 
