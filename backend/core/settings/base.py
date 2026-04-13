@@ -45,20 +45,22 @@ LOGGING = {
     #         "level": "DEBUG",
     #     }
     # },
-    "loggers": {
-        "dj_rest_auth": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": True,
-        },
-        "django.request": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
-    }
-    if DEBUG
-    else {},
+    "loggers": (
+        {
+            "dj_rest_auth": {
+                "handlers": ["console"],
+                "level": "DEBUG",
+                "propagate": True,
+            },
+            "django.request": {
+                "handlers": ["console"],
+                "level": "DEBUG",
+                "propagate": False,
+            },
+        }
+        if DEBUG
+        else {}
+    ),
 }
 
 
