@@ -45,7 +45,24 @@ LOGGING = {
     #         "level": "DEBUG",
     #     }
     # },
+    "loggers": (
+        {
+            "dj_rest_auth": {
+                "handlers": ["console"],
+                "level": "DEBUG",
+                "propagate": True,
+            },
+            "django.request": {
+                "handlers": ["console"],
+                "level": "DEBUG",
+                "propagate": False,
+            },
+        }
+        if DEBUG
+        else {}
+    ),
 }
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -71,7 +88,7 @@ INSTALLED_APPS = [
     "dj_rest_auth.registration",
     "rest_framework",
     "planner",
-    "accounts",
+    "accounts.apps.AccountsConfig",
     "corsheaders",
 ]
 
@@ -109,6 +126,7 @@ REST_AUTH = {
     "JWT_AUTH_HTTPONLY": True,  # HttpOnly — JS не видит куки
     "JWT_AUTH_SAMESITE": "Lax",  # защита от CSRF
     "TOKEN_MODEL": None,
+    "SESSION_LOGIN": False,
 }
 
 SIMPLE_JWT = {
