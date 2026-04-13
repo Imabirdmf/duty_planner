@@ -15,7 +15,7 @@ class CustomUserManager(BaseUserManager):
         if not email:
             raise ValueError("Please write an email")
         email = self.normalize_email(email)
-        username = email.split("@")[0]
+        username = str(uuid.uuid4())
         user = self.model(email=email, username=username)
         user.set_password(password)
         user.save(using=self._db)

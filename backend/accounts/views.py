@@ -3,13 +3,12 @@ import os
 
 from accounts.models import Invitation, User
 from accounts.serializers import EmailRegisterSerializer
+from dj_rest_auth.jwt_auth import set_jwt_cookies
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-
-FRONTEND_URL = os.environ.get("FRONTEND_URL")
 
 
 class CreateInvitationView(APIView):
@@ -19,7 +18,7 @@ class CreateInvitationView(APIView):
         invitation = Invitation.objects.create(created_by=request.user)
         tkn = invitation.token
         return Response(
-            {"url": f"{FRONTEND_URL}/register?token={tkn}"},
+            {"url": f'{os.environ.get("FRONTEND_URL")}/register?token={tkn}'},
             status=status.HTTP_201_CREATED,
         )
 
@@ -41,17 +40,7 @@ class RegisterView(APIView):
         )
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
+
         response = Response({"user": {"email": user.email}}, status=201)
-        response.set_cookie(
-            key="auth-token",
-            value=str(access),
-            httponly=True,
-            samesite="Lax",
-        )
-        response.set_cookie(
-            key="refresh-token",
-            value=str(refresh),
-            httponly=True,
-            samesite="Lax",
-        )
+        set_jwt_cookies(response, access_token=access, refresh_token=refresh)
         return response
