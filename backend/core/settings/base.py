@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     "planner",
     "accounts.apps.AccountsConfig",
     "corsheaders",
+    "common_app"
 ]
 
 SITE_ID = 1
