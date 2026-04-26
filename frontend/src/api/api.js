@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function getCookie(name) {
   const value = `; ${document.cookie}`;
@@ -10,7 +10,7 @@ function getCookie(name) {
 }
 
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: `${API_URL}/api`,
   headers: { "Content-Type": "application/json" },
   timeout: 5000,
   withCredentials: true
