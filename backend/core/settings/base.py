@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "corsheaders",
     "allauth.socialaccount.providers.google",
+    "common_app"
 ]
 
 SITE_ID = 1
