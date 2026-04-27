@@ -18,7 +18,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 GOOGLE_REDIRECT_URI = os.environ.get(
-    "GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback/"
+    "GOOGLE_REDIRECT_URI"
 )
 
 GOOGLE_CLIENT_CONFIG = {
