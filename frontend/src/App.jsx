@@ -900,30 +900,6 @@ const App = () => {
           </div>
         </header>
 
-        {/* Header
-        <header className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <h1 className="text-2xl font-black text-slate-800">
-            Duty<span className="text-blue-600">Planner</span>
-          </h1>
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
-            Control Panel v2.1
-          </div>
-          <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                {user && <span className="text-[11px] font-bold text-slate-400 hidden sm:block">{user.email}</span>}
-                <button onClick={logout} className="flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border border-slate-100">
-                  <LogOut size={13} /> Sign Out
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setShowLogin(true)} className="flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border border-slate-100">
-                <LogIn size={13} /> Sign In
-              </button>
-            )}
-          </div>
-        </header> */}
-
         {/* ① Staff block — full width */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-visible">
           <div className="p-5 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

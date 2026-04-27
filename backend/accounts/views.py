@@ -21,6 +21,20 @@ GOOGLE_REDIRECT_URI = os.environ.get(
     "GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback/"
 )
 
+GOOGLE_CLIENT_CONFIG = {
+    "web": {
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+}
+
+GOOGLE_SCOPES = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+]
 
 class CreateInvitationView(APIView):
     permission_classes = [IsAuthenticated]
@@ -60,19 +74,8 @@ class RegisterView(APIView):
 class GoogleLoginView(APIView):
     def post(self, request):
         flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
-                    "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=[
-                "openid",
-                "https://www.googleapis.com/auth/userinfo.email",
-                "https://www.googleapis.com/auth/userinfo.profile",
-            ],
+            GOOGLE_CLIENT_CONFIG,
+            scopes=GOOGLE_SCOPES,
             redirect_uri=GOOGLE_REDIRECT_URI,
         )
         code_verifier = secrets.token_urlsafe(64)
@@ -102,32 +105,32 @@ class GoogleCallbackView(APIView):
         if state != request.session.get("google_oauth_state"):
             return Response({"error": "Invalid state"}, status=400)
         flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
-                    "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=[
-                "openid",
-                "https://www.googleapis.com/auth/userinfo.email",
-                "https://www.googleapis.com/auth/userinfo.profile",
-            ],
+            GOOGLE_CLIENT_CONFIG,
+            scopes=GOOGLE_SCOPES,
             redirect_uri=GOOGLE_REDIRECT_URI,
         )
         code_verifier = request.session.get("google_code_verifier")
-        flow.fetch_token(code=code, code_verifier=code_verifier)
+        try:
+            flow.fetch_token(code=code, code_verifier=code_verifier)
+        except Exception:
+            return Response({"error": "Failed to exchange code for token"}, status=400)
 
-        id_info = id_token.verify_oauth2_token(
-            flow.credentials.id_token,
-            google_requests.Request(),
-            os.environ.get("GOOGLE_CLIENT_ID"),
-        )
+        try:
+            id_info = id_token.verify_oauth2_token(
+                flow.credentials.id_token,
+                google_requests.Request(),
+                os.environ.get("GOOGLE_CLIENT_ID"),
+            )
+        except Exception:
+            return Response({"error": "Failed to verify Google token"}, status=400)
+
         email = id_info.get("email")
+        if not email:
+            return Response({"error": "No email provided by Google"}, status=400)
+
         allowed_domain = os.environ.get("GOOGLE_ALLOWED_DOMAIN")
-        if allowed_domain and not email.endswith(f"@{allowed_domain}"):
+        email_domain = email.lower().split("@")[-1]
+        if allowed_domain and email_domain != allowed_domain.lower():
             frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
             response = HttpResponse(
                 f"""

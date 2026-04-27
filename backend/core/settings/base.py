@@ -135,6 +135,9 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=30),
 }
 
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
