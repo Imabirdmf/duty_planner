@@ -145,10 +145,9 @@ class GoogleCallbackView(APIView):
             response["Cross-Origin-Opener-Policy"] = "unsafe-none"
             return response
 
-        user, created = User.objects.get_or_create(email=email)
-        if created:
-            user.set_unusable_password()  # Google пользователь, пароль не нужен
-            user.save()
+        user = User.objects.filter(email=email).first()
+        if not user:
+            user = User.objects.create_user(email=email)
 
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
