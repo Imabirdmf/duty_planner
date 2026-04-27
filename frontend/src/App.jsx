@@ -59,7 +59,7 @@ const LoginPage = ({ onLogin, onGoogleLogin, modal = false }) => {
       const res = await api.post("/auth/google/");
       const popup = window.open(res.data.url, "google-auth", "width=500,height=600");
       
-      const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const backendUrl = import.meta.env.VITE_API_URL ?? "";
 
       const handleMessage = async (event) => {
         // if (event.origin !== backendUrl) return;
