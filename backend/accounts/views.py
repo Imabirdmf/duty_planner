@@ -1,6 +1,7 @@
 # Create your views here.
 import base64
 import hashlib
+import logging
 import os
 import secrets
 
@@ -20,6 +21,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 GOOGLE_REDIRECT_URI = os.environ.get(
     "GOOGLE_REDIRECT_URI"
 )
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_CLIENT_CONFIG = {
     "web": {
@@ -131,6 +134,9 @@ class GoogleCallbackView(APIView):
 
         allowed_domain = os.environ.get("GOOGLE_ALLOWED_DOMAIN")
         email_domain = email.lower().split("@")[-1]
+        logger.info("GOOGLE_ALLOWED_DOMAIN=%r  email_domain=%r  match=%s",
+                    allowed_domain, email_domain,
+                    allowed_domain and email_domain == allowed_domain.lower())
         if allowed_domain and email_domain != allowed_domain.lower():
             frontend_url = os.environ.get("FRONTEND_URL", "*")
             response = HttpResponse(
