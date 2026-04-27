@@ -5,12 +5,15 @@ ALLOWED_HOSTS = ["*"]
 
 
 REST_AUTH = {
-    "REGISTER_SERIALIZER": "accounts.serializers.EmailRegisterSerializer",
-    "USE_JWT": True,
-    "JWT_AUTH_COOKIE": "auth-token",  # имя куки для access токена
-    "JWT_AUTH_REFRESH_COOKIE": "refresh-token",  # имя куки для refresh токена
-    "JWT_AUTH_HTTPONLY": True,  # HttpOnly — JS не видит куки
-    "JWT_AUTH_SAMESITE": "Lax",  # защита от CSRF
+    **REST_AUTH,  # noqa: F405
     "JWT_AUTH_SECURE": True,
-    "TOKEN_MODEL": None,
 }
+
+SESSION_COOKIE_SECURE = True
+
+CORS_ALLOWED_ORIGINS = [
+    "https://dutyplannerbackend-staging.up.railway.app",
+    "https://dutyplannerfrontend-staging.up.railway.app",
+    "https://dutyplannerfrontend-production.up.railway.app",
+    "https://dutyplannerbackend-production.up.railway.app"
+]
