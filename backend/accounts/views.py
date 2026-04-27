@@ -130,7 +130,7 @@ class GoogleCallbackView(APIView):
         allowed_domain = os.environ.get("GOOGLE_ALLOWED_DOMAIN")
         email_domain = email.lower().split("@")[-1]
         if allowed_domain and email_domain != allowed_domain.lower():
-            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+            frontend_url = os.environ.get("FRONTEND_URL", "*")
             response = HttpResponse(
                 f"""
                 <html><body><script>
@@ -150,7 +150,7 @@ class GoogleCallbackView(APIView):
 
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+        frontend_url = os.environ.get("FRONTEND_URL", "*")
         response = HttpResponse(
             f"""
             <html><body><script>
