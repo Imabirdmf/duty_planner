@@ -15,5 +15,5 @@ CORS_ALLOWED_ORIGINS = [
     "https://dutyplannerbackend-staging.up.railway.app",
     "https://dutyplannerfrontend-staging.up.railway.app",
     "https://dutyplannerfrontend-production.up.railway.app",
-    "https://dutyplannerbackend-production.up.railway.app"
+    "https://dutyplannerbackend-production.up.railway.app",
 ]

@@ -8,10 +8,9 @@ from django.conf import settings
 def make_migration(apps, schema_editor):
     Site.objects.get_or_create(pk=settings.SITE_ID)
 
+
 class Migration(migrations.Migration):
 
     dependencies = [("sites", "0002_alter_domain_unique")]
 
     operations = [migrations.RunPython(make_migration, migrations.RunPython.noop)]
-
-

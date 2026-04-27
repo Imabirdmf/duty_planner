@@ -36,6 +36,7 @@ GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/userinfo.profile",
 ]
 
+
 class CreateInvitationView(APIView):
     permission_classes = [IsAuthenticated]
 
