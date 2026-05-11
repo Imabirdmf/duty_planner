@@ -1,5 +1,7 @@
 import logging
+from typing import Any
 
+from common_app.services.jira import JiraService
 from django.db import transaction
 from django.db.models import QuerySet
 from rest_framework import status, viewsets
@@ -7,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .serializers import (
     DatesQuerySerializer,
@@ -184,3 +187,32 @@ class DutyAssignmentViewSet(BaseAssignmentViewSet):
         return Response(
             {"deleted_duty_count": deleted_duty_count}, status=status.HTTP_200_OK
         )
+
+
+class JiraSyncView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        self.assignments = ManageAssignments()
+        self.jira = JiraService()
+
+    def post(self, request):
+        objects_ids = request.data.get("duty_ids")
+        try:
+            if objects_ids:
+                self.assignments.create_or_update_jira_ticket(
+                    duty_ids=objects_ids, jira=self.jira
+                )
+                return Response(
+                    data={"success": "Everything is synced with Jira"},
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    data={"error": "Not synced"}, status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            return Response(
+                data={"error": {str(e)}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

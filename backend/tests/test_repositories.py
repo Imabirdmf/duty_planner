@@ -92,7 +92,7 @@ class TestStaffRepository:
         Staff.objects.filter(id=staff_users[0].id).update(priority=5)
         Staff.objects.filter(id=staff_users[1].id).update(priority=3)
         Staff.objects.filter(id=staff_users[2].id).update(priority=7)
-        Staff.objects.filter(id=staff_users[4].id).update(priority=3)
+        Staff.objects.filter(id=staff_users[3].id).update(priority=3)
 
         min_priority = repository.get_minimum_priority()
         assert min_priority == 3
@@ -118,7 +118,7 @@ class TestStaffRepository:
         )
         logger.info("priorities: %s", priorities)
         assert min(priorities) == 1
-        assert priorities == [1, 2, 3, 4]
+        assert priorities == [1, 2, 3]
 
 
 @pytest.mark.django_db

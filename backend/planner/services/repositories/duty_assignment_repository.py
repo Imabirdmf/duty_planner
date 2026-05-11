@@ -36,6 +36,11 @@ class DutyAssignmentRepository(BaseRepository[DutyAssignment]):
     def get_count_by_duty_id(self, duty_id: int) -> int:
         return DutyAssignment.objects.filter(duty__id=duty_id).count()
 
+    def get_list_by_duty_ids(self, ids: list[int]) -> QuerySet[DutyAssignment]:
+        return DutyAssignment.objects.filter(duty_id__in=ids).select_related(
+            "duty", "user"
+        )
+
     def get_users_for_duty(self, duty_id: int) -> list[Staff]:
         assignments = DutyAssignment.objects.filter(duty_id=duty_id).select_related(
             "user"

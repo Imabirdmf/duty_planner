@@ -2,6 +2,7 @@ import datetime
 import itertools
 import logging
 
+from common_app.services.jira import JiraService
 from django.db import transaction
 from django.db.models import QuerySet
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
@@ -108,7 +109,9 @@ class ManageAssignments:
             duty_assignment = self.duty_assignment_repo.get_assignment_by_duty_and_user(
                 duty.id, prev_user_id
             )
-            self.duty_assignment_repo.update(duty_assignment.id, user_id=new_user_id)
+            self.duty_assignment_repo.update(
+                duty_assignment.id, user_id=new_user_id, is_synced=False
+            )
             self.staff_repo.update_priority(new_user_id, diff=1)
             self.staff_repo.update_priority(prev_user_id, diff=-1)
         return duty_assignment
@@ -147,3 +150,24 @@ class ManageAssignments:
     def bulk_delete_duties_by_id(self, ids: list[int]) -> int:
         count = self.duty_repo.bulk_delete_by_id(ids)
         return count
+
+    def create_or_update_jira_ticket(self, duty_ids: list[int], jira: JiraService):
+        duties = self.duty_assignment_repo.get_list_by_duty_ids(duty_ids)
+        for duty in duties:
+            with transaction.atomic():
+                if not duty.jira_issue_key:
+                    issue_key = jira.create_issue(
+                        duty.duty.date,
+                        duty.user.jira_team_id,
+                        duty.user.jira_account_id,
+                    )
+                    self.duty_assignment_repo.update(
+                        duty.id, jira_issue_key=issue_key, is_synced=True
+                    )
+                elif not duty.is_synced:
+                    jira.update_issue(
+                        duty.jira_issue_key,
+                        duty.user.jira_team_id,
+                        duty.user.jira_account_id,
+                    )
+                    self.duty_assignment_repo.update(duty.id, is_synced=True)
