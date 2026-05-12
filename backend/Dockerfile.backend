@@ -4,20 +4,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_PROJECT_ENVIRONMENT="/usr/local" \
-    DJANGO_SETTINGS_MODULE=core.settings.production \
-    PATH="/root/.local/bin:/usr/local/bin:$PATH"
+    DJANGO_SETTINGS_MODULE=core.settings.production
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl build-essential \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -LsSf --proto '=https' --tlsv1.2 https://astral.sh/uv/install.sh | sh
+RUN pip install uv
 
 # Копирование файлов зависимостей
 COPY pyproject.toml uv.lock ./
 
-RUN /root/.local/bin/uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project
 
 COPY backend ./backend
 COPY entrypoint.sh /entrypoint.sh
