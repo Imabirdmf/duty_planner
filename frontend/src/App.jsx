@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   BarChart2,
+  Check,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -490,6 +491,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [warnings, setWarnings] = useState([]);
   const [highlightedDates, setHighlightedDates] = useState(new Set());
+  const [jiraSynced, setJiraSynced] = useState(false);
 
   const [activeEditPopover, setActiveEditPopover] = useState(null);
   const [activeAddUserPopover, setActiveAddUserPopover] = useState(null);
@@ -692,6 +694,25 @@ const App = () => {
     }
   };
 
+  const handleSyncJira = async () => {
+    try {
+      const dutyIds = Object.values(timetable).map((entry) => entry.dutyId);
+      await api.post("/jira/sync/", { duty_ids: dutyIds });
+      setJiraSynced(true);
+      setTimeout(() => setJiraSynced(false), 5000);
+    } catch (err) {
+      try {
+        const data = err.response?.data;
+        const raw = Array.isArray(data?.error) ? data.error[0] : data?.error;
+        const parsed = JSON.parse(raw);
+        const message = parsed?.errorMessages?.[0] || "Not synced";
+        setError(message);
+      } catch {
+        setError("Not synced");
+      }
+    }
+  };
+
   const handleInvite = async () => {
     if (inviteUrl) { setInviteUrl(null); return; }
     try {
@@ -832,6 +853,28 @@ const App = () => {
                 </button>
               </div>
             </div>
+          </div>  
+        )}
+        {jiraSynced && (
+          <div className="sticky top-0 z-[300]">
+            <div className="bg-green-50 border-2 border-green-200 text-green-800 p-4 rounded-2xl shadow-lg">
+              <div className="flex items-center gap-3">
+                <Check size={20} className="flex-shrink-0" />
+                <span className="font-bold text-sm">Everything is synced with Jira</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {deletedCount !== null && (
+          <div className="sticky top-0 z-[300] bg-emerald-50 border-b-2 border-emerald-200 text-emerald-700 p-4 rounded-2xl shadow-lg flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Info size={20} className="flex-shrink-0" />
+              <span className="font-bold text-sm">Deleted duty days: {deletedCount}</span>
+            </div>
+            <button onClick={() => setDeletedCount(null)} className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer">
+              <X size={16} />
+            </button>
           </div>
         )}
         {deletedCount !== null && (
@@ -1101,6 +1144,17 @@ const App = () => {
                     {isDistributing ? "Generating…" : (<><Play size={13} /> Generate Schedule</>)}
                   </button>
                 </div>
+                              {/* Jira Sync button */}
+              <div className="flex flex-col items-center gap-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase opacity-0 select-none">_</label>
+                <button
+                  onClick={handleSyncJira}
+                  disabled={Object.keys(timetable).length === 0}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-30 shadow-xl shadow-blue-100 cursor-pointer h-[38px]"
+                >
+                  Sync Jira
+                </button>
+              </div>
               </div>
             </div>
           )}

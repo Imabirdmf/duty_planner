@@ -26,6 +26,7 @@ from django.urls import include, path
 from planner.views import (
     DaysOffViewSet,
     DutyAssignmentViewSet,
+    JiraSyncView,
     StaffViewSet,
 )
 from rest_framework.routers import DefaultRouter
@@ -43,4 +44,5 @@ urlpatterns = [
     path("api/auth/invite/", CreateInvitationView.as_view()),
     path("api/auth/google/", GoogleLoginView.as_view()),
     path("api/auth/google/callback/", GoogleCallbackView.as_view()),
+    path("api/jira/sync/", JiraSyncView.as_view()),
 ]

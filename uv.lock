@@ -420,6 +420,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-coverage" },
     { name = "ruff" },
+    { name = "types-requests" },
 ]
 
 [package.metadata]
@@ -454,6 +455,7 @@ dev = [
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-coverage", specifier = ">=0.0" },
     { name = "ruff", specifier = ">=0.15.0" },
+    { name = "types-requests", specifier = ">=2.33.0.20260508" },
 ]
 
 [[package]]
@@ -898,6 +900,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/90/76/437d71068094df0726366574cf3432a4ed754217b436eb7429415cf2d480/sqlparse-0.5.5.tar.gz", hash = "sha256:e20d4a9b0b8585fdf63b10d30066c7c94c5d7a7ec47c889a2d83a3caa93ff28e", size = 120815, upload-time = "2025-12-19T07:17:45.073Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/4b/359f28a903c13438ef59ebeee215fb25da53066db67b305c125f1c6d2a25/sqlparse-0.5.5-py3-none-any.whl", hash = "sha256:12a08b3bf3eec877c519589833aed092e2444e68240a3577e8e26148acc7b1ba", size = 46138, upload-time = "2025-12-19T07:17:46.573Z" },
+]
+
+[[package]]
+name = "types-requests"
+version = "2.33.0.20260508"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/6b/eb226bdd61a982c9a03e02c657fb4ab001733506e6423906ac142331f2e3/types_requests-2.33.0.20260508.tar.gz", hash = "sha256:81b2ae5f0d20967714a6aa5ef9284c05570d7cb06b7de8f2a77b918b63ddd411", size = 23991, upload-time = "2026-05-08T04:50:56.818Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/96/080db0afdf2c5cc5fe512b41354e8d114fe8f65e9510c56ff8dfd40216ce/types_requests-2.33.0.20260508-py3-none-any.whl", hash = "sha256:fa01459cca184229713df03709db46a905325906d27e042cd4fd7ea3d15d3400", size = 20722, upload-time = "2026-05-08T04:50:55.548Z" },
 ]
 
 [[package]]

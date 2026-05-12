@@ -115,7 +115,7 @@ class TestPlanner:
         Staff.objects.filter(id=staff_users[0].id).update(priority=5)
         Staff.objects.filter(id=staff_users[1].id).update(priority=7)
         Staff.objects.filter(id=staff_users[2].id).update(priority=10)
-        Staff.objects.filter(id=staff_users[4].id).update(priority=9)
+        Staff.objects.filter(id=staff_users[3].id).update(priority=9)
 
         planner = Planner(
             start_date=staff_users[0].id,  # Dummy values
