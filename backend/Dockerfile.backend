@@ -13,7 +13,7 @@ RUN pip install uv==0.8.15 --only-binary :all:
 # Копирование файлов зависимостей
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-dev --no-install-project --no-build
+RUN uv sync --frozen --no-dev --no-install-project
 
 COPY backend ./backend
 COPY entrypoint.sh /entrypoint.sh
