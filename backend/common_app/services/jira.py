@@ -17,7 +17,7 @@ class JiraService:
         self.email = os.environ.get('JIRA_EMAIL')
         logger.info(self.email)
         token = base64.b64encode(
-            f"{os.environ.get('JIRA_EMAIL')}:{os.environ.get('JIRA_API_TOKEN')}".encode()
+            f"{self.email}:{os.environ.get('JIRA_API_TOKEN')}".encode()
         ).decode()
         self.session.headers.update(
             {"Content-Type": "application/json", "Authorization": f"Basic {token}"}
