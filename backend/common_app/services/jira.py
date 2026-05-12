@@ -14,7 +14,8 @@ class JiraService:
         self.project_key = os.environ.get("JIRA_PROJECT_KEY")
         self.parent_issue_key = os.environ.get("JIRA_PARENT_ISSUE_KEY")
         self.session = requests.Session()
-        logger.info(os.environ.get('JIRA_EMAIL'))
+        self.email = os.environ.get('JIRA_EMAIL')
+        logger.info('email: %', self.email)
         token = base64.b64encode(
             f"{os.environ.get('JIRA_EMAIL')}:{os.environ.get('JIRA_API_TOKEN')}".encode()
         ).decode()
