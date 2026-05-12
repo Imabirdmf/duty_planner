@@ -21,6 +21,10 @@ class DutyRepository(BaseRepository[Duty]):
     def get_first_element_by_date(self, duty_date: datetime.date) -> Duty | None:
         return Duty.objects.filter(date=duty_date).first()
 
+    def get_or_create_by_date(self, date: datetime.date) -> Duty:
+        duty, _ = Duty.objects.get_or_create(date=date)
+        return duty
+
     def get_list_of_duties(
         self, start_date: datetime.date, end_date: datetime.date, ordered: bool = False
     ):

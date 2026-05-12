@@ -94,7 +94,7 @@ class ManageAssignments:
         self, duty_date: datetime.date, user_id: int
     ) -> DutyAssignment:
         with transaction.atomic():
-            duty = self.duty_repo.get_first_element_by_date(duty_date)
+            duty = self.duty_repo.get_or_create_by_date(duty_date)
             duty_assignment = self.duty_assignment_repo.create(
                 duty=duty, user_id=user_id
             )

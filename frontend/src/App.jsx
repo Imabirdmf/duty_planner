@@ -696,7 +696,9 @@ const App = () => {
 
   const handleSyncJira = async () => {
     try {
-      const dutyIds = Object.values(timetable).map((entry) => entry.dutyId);
+      const dutyIds = selectedDuties.size > 0
+        ? Array.from(selectedDuties)
+        : Object.values(timetable).map((entry) => entry.dutyId);
       await api.post("/jira/sync/", { duty_ids: dutyIds });
       setJiraSynced(true);
       setTimeout(() => setJiraSynced(false), 5000);
