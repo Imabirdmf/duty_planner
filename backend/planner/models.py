@@ -8,8 +8,8 @@ class Staff(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     priority = models.IntegerField(default=0)
-    jira_team_id = models.CharField(max_length=100, null=True, blank=True)
-    jira_account_id = models.CharField(max_length=100, null=True, blank=True)
+    jira_team_id = models.CharField(max_length=100, default="", blank=True)
+    jira_account_id = models.CharField(max_length=100, default="", blank=True)
 
     class Meta:
         constraints = [
@@ -49,7 +49,7 @@ class Duty(models.Model):
 class DutyAssignment(models.Model):
     user = models.ForeignKey(Staff, on_delete=models.CASCADE)
     duty = models.ForeignKey(Duty, on_delete=models.CASCADE)
-    jira_issue_key = models.CharField(max_length=200, null=True, blank=True)
+    jira_issue_key = models.CharField(max_length=200, default="", blank=True)
     is_synced = models.BooleanField(default=False)
 
     objects = BulkUpdateOrCreateQuerySet.as_manager()

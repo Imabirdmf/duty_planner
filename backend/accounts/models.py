@@ -1,4 +1,3 @@
-# from django.contrib.auth.base_user import BaseUserManager
 import uuid
 from datetime import timedelta
 from typing import Any

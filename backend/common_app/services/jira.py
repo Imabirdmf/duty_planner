@@ -51,7 +51,7 @@ class JiraService:
         answer = self.session.post(url=jira_url, json=ticket_payload)
         logger.info((jira_url, self.session.headers))
         if answer.status_code != 201:
-            raise Exception(answer.text)
+            raise requests.exceptions.HTTPError(answer.text)
         issue_key = answer.json()["key"]
         return issue_key
 
@@ -67,4 +67,4 @@ class JiraService:
         }
         answer = self.session.put(url=jira_url, json=ticket_payload)
         if answer.status_code not in (200, 201, 204):
-            raise Exception(answer.text)
+            raise requests.exceptions.HTTPError(answer.text)

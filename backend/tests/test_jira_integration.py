@@ -149,8 +149,8 @@ class TestStaffJiraFields:
             first_name="Test", last_name="User", email="test@example.com"
         )
 
-        assert staff.jira_team_id is None
-        assert staff.jira_account_id is None
+        assert staff.jira_team_id is ""
+        assert staff.jira_account_id is ""
 
 
 @pytest.mark.django_db
@@ -170,7 +170,7 @@ class TestDutyAssignmentJiraFields:
         """Test default values for Jira fields"""
         assignment = DutyAssignment.objects.create(user=staff_user, duty=duty_day)
 
-        assert assignment.jira_issue_key is None
+        assert assignment.jira_issue_key is ""
         assert assignment.is_synced is False
 
 
