@@ -174,3 +174,36 @@ def duty_with_assignments(db, staff_users, duty_day):
         "assignments": assignments,
         "users": [staff_users[0], staff_users[1]],
     }
+
+
+@pytest.fixture
+def jira_env_vars(monkeypatch):
+    """Set up Jira environment variables for testing"""
+    monkeypatch.setenv("JIRA_BASE_URL", "https://test.atlassian.net")
+    monkeypatch.setenv("JIRA_PROJECT_KEY", "TEST")
+    monkeypatch.setenv("JIRA_PARENT_ISSUE_KEY", "TEST-123")
+    monkeypatch.setenv("JIRA_EMAIL", "test@example.com")
+    monkeypatch.setenv("JIRA_API_TOKEN", "test-token")
+
+
+@pytest.fixture
+def staff_with_jira(db):
+    """Create staff member with Jira IDs"""
+    return Staff.objects.create(
+        first_name="Jira",
+        last_name="User",
+        email="jira@example.com",
+        jira_team_id="team-123",
+        jira_account_id="acc-456",
+    )
+
+
+@pytest.fixture
+def mock_jira_service():
+    """Mock JiraService for testing"""
+    from unittest.mock import Mock
+    from common_app.services.jira import JiraService
+
+    jira = Mock(spec=JiraService)
+    jira.create_issue.return_value = "TEST-789"
+    return jira
