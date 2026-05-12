@@ -8,4 +8,4 @@ dist/
 build/
 .env
 *.db
-.DS_Store
+*.DS_Store
