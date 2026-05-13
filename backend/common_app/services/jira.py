@@ -51,11 +51,6 @@ class JiraService:
         answer = self.session.post(url=jira_url, json=ticket_payload)
         logger.info((jira_url, self.session.headers))
         logger.info(ticket_payload)
-        # Test: can the token see the parent issue?
-        test_url = f"{self.base_url}/rest/api/3/issue/{self.parent_issue_key}"
-        response = requests.get(test_url, auth=self.auth, headers=self.headers)
-        logger.info(f"Parent issue check: {response.status_code}")
-        logger.info(f"Response: {response.text[:200]}")
         if answer.status_code != 201:
             raise requests.exceptions.HTTPError(answer.text)
         issue_key = answer.json()["key"]
