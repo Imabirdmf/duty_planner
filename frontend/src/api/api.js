@@ -15,6 +15,7 @@ const api = axios.create({
   timeout: 5000,
   withCredentials: true
 });
+console.log(import.meta.env.VITE_API_URL)
 
 const SAFE_METHODS = ["get", "head", "options"];
  
