@@ -224,6 +224,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://dutyplannerbackend-staging.up.railway.app",
     "https://dutyplannerfrontend-staging.up.railway.app",
+    "https://dutyplannerfrontend-production.up.railway.app",
+    "https://dutyplannerbackend-production.up.railway.app"
+]
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
