@@ -104,6 +104,9 @@ class GoogleCallbackView(APIView):
     def get(self, request):
         state = request.query_params.get("state")
         code = request.query_params.get("code")
+        logger.info("Session state: %r", request.session.get("google_oauth_state"))
+        logger.info("Query state: %r", state)
+        logger.info("Session keys: %r", list(request.session.keys()))
         if state != request.session.get("google_oauth_state"):
             return Response({"error": "Invalid state"}, status=400)
         flow = Flow.from_client_config(
