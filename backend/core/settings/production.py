@@ -9,6 +9,7 @@ REST_AUTH = {
     "JWT_AUTH_SECURE": True,
 }
 
+SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 
 CORS_ALLOWED_ORIGINS = [
@@ -16,4 +17,9 @@ CORS_ALLOWED_ORIGINS = [
     "https://dutyplannerfrontend-staging.up.railway.app",
     "https://dutyplannerfrontend-production.up.railway.app",
     "https://dutyplannerbackend-production.up.railway.app",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://dutyplannerbackend-production.up.railway.app",
+    "https://dutyplannerbackend-staging.up.railway.app",
 ]
