@@ -50,6 +50,7 @@ class JiraService:
         }
         answer = self.session.post(url=jira_url, json=ticket_payload)
         logger.info((jira_url, self.session.headers))
+        logger.info(ticket_payload)
         if answer.status_code != 201:
             raise requests.exceptions.HTTPError(answer.text)
         issue_key = answer.json()["key"]
