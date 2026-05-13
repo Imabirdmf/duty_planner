@@ -22,5 +22,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://dutyplannerbackend-production.up.railway.app",
+    'https://dutyplannerfrontend-production.up.railway.app/',
     "https://dutyplannerbackend-staging.up.railway.app",
+    'https://dutyplannerfrontend-staging.up.railway.app/'
 ]
