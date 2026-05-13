@@ -12,6 +12,9 @@ REST_AUTH = {
 
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False
 
 CORS_ALLOWED_ORIGINS = [
     "https://dutyplannerbackend-staging.up.railway.app",
