@@ -13,12 +13,10 @@ class JiraService:
         self.base_url = os.environ.get("JIRA_BASE_URL")
         self.project_key = os.environ.get("JIRA_PROJECT_KEY")
         self.parent_issue_key = os.environ.get("JIRA_PARENT_ISSUE_KEY")
-        self.session = requests.Session()
-        self.email = os.environ.get('JIRA_EMAIL')
-        logger.info(self.email)
         token = base64.b64encode(
-            f"{self.email}:{os.environ.get('JIRA_API_TOKEN')}".encode()
+            f"{os.environ.get('JIRA_EMAIL')}:{os.environ.get('JIRA_API_TOKEN')}".encode()
         ).decode()
+        self.session = requests.Session()
         self.session.headers.update(
             {"Content-Type": "application/json", "Authorization": f"Basic {token}"}
         )
