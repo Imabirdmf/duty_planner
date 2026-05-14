@@ -1,10 +1,11 @@
-##### Current build status
+# DutyPlanner
 
 [![Python CI](https://github.com/Imabirdmf/duty_planner/actions/workflows/ci.yaml/badge.svg)](https://github.com/Imabirdmf/duty_planner/actions/workflows/ci.yaml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/quality_gate?project=Imabirdmf_duty_planner)](https://sonarcloud.io/summary/new_code?id=Imabirdmf_duty_planner)
 
-##### SonarQube
+A web application for automating staff duty scheduling. DutyPlanner generates optimal duty rosters, tracks staff availability, and syncs assignments directly to Jira — so you spend less time on spreadsheets and more time on actual work.
 
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Imabirdmf_duty_planner)](https://sonarcloud.io/summary/new_code?id=Imabirdmf_duty_planner)
+---
 
 ## Overview
 
@@ -29,14 +30,6 @@ Handles all CRUD operations for duty assignments with atomic transactions and au
 
 ### StaffAvailability Service
 Checks staff availability considering days off, current assignments, and previous duties to prevent consecutive scheduling.
-
-
-# DutyPlanner
-
-[![Python CI](https://github.com/Imabirdmf/duty_planner/actions/workflows/ci.yaml/badge.svg)](https://github.com/Imabirdmf/duty_planner/actions/workflows/ci.yaml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/quality_gate?project=Imabirdmf_duty_planner)](https://sonarcloud.io/summary/new_code?id=Imabirdmf_duty_planner)
-
-A web application for automating staff duty scheduling. DutyPlanner generates optimal duty rosters, tracks staff availability, and syncs assignments directly to Jira — so you spend less time on spreadsheets and more time on actual work.
 
 ---
 
@@ -126,6 +119,51 @@ Django ORM / PostgreSQL
 - Python ≥ 3.13
 - Node.js ≥ 20 and npm
 - Docker and Docker Compose (for the recommended setup)
+
+- ## Deployment
+
+The app is deployed on [Railway](https://railway.app/) with three separate services:
+
+- **Backend** — Django + Gunicorn, built from `backend/Dockerfile.backend`
+- **Frontend** — React + Nginx, built from `frontend/Dockerfile.frontend`; nginx proxies `/api/` and `/admin/` requests to the backend's internal Railway URL
+- **Database** — managed PostgreSQL service
+
+Key production settings:
+- `DJANGO_SETTINGS_MODULE=core.settings.production`
+- JWT cookies are set with `Secure=True` and `SameSite=None`
+- Static files are served via WhiteNoise
+---
+
+[//]: # ()
+[//]: # (## Contributing)
+
+[//]: # ()
+[//]: # (1. Fork the repository)
+
+[//]: # (2. Create a feature branch: `git checkout -b feature/your-feature`)
+
+[//]: # (3. Make your changes)
+
+[//]: # (4. Run linting and tests: `make lint && make check`)
+
+[//]: # (5. Open a pull request — CI will run automatically on push)
+
+#### Using Docker Compose (Recommended)
+
+
+```bash
+# Clone the repository
+git clone https://github.com/Imabirdmf/duty_planner.git
+cd duty_planner
+
+# Start all services
+docker-compose up -d
+
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000
+# Admin: http://localhost:8000/admin
+
 
 ### Option 1 — Docker Compose (recommended)
 
@@ -268,51 +306,3 @@ Run with coverage:
 ```bash
 make test-coverage
 ```
-
----
-
-## Deployment
-
-The app is deployed on [Railway](https://railway.app/) with three separate services:
-
-- **Backend** — Django + Gunicorn, built from `backend/Dockerfile.backend`
-- **Frontend** — React + Nginx, built from `frontend/Dockerfile.frontend`; nginx proxies `/api/` and `/admin/` requests to the backend's internal Railway URL
-- **Database** — managed PostgreSQL service
-
-Key production settings:
-- `DJANGO_SETTINGS_MODULE=core.settings.production`
-- JWT cookies are set with `Secure=True` and `SameSite=None`
-- Static files are served via WhiteNoise
-
----
-
-[//]: # ()
-[//]: # (## Contributing)
-
-[//]: # ()
-[//]: # (1. Fork the repository)
-
-[//]: # (2. Create a feature branch: `git checkout -b feature/your-feature`)
-
-[//]: # (3. Make your changes)
-
-[//]: # (4. Run linting and tests: `make lint && make check`)
-
-[//]: # (5. Open a pull request — CI will run automatically on push)
-
-#### Using Docker Compose (Recommended)
-
-
-```bash
-# Clone the repository
-git clone https://github.com/Imabirdmf/duty_planner.git
-cd duty_planner
-
-# Start all services
-docker-compose up -d
-
-# Access the application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# Admin: http://localhost:8000/admin
-
