@@ -9,3 +9,5 @@ build/
 .env
 *.db
 *.DS_Store
+# local run state (run-duty-planner skill)
+.run-local/
