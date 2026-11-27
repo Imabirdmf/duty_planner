@@ -41,6 +41,14 @@ class DutyAssignmentRepository(BaseRepository[DutyAssignment]):
             "duty", "user"
         )
 
+    def count_by_user_for_duty_ids(self, duty_ids: list[int]) -> dict[int, int]:
+        rows = (
+            DutyAssignment.objects.filter(duty_id__in=duty_ids)
+            .values("user_id")
+            .annotate(n=Count("id"))
+        )
+        return {row["user_id"]: row["n"] for row in rows}
+
     def get_users_for_duty(self, duty_id: int) -> list[Staff]:
         assignments = DutyAssignment.objects.filter(duty_id=duty_id).select_related(
             "user"

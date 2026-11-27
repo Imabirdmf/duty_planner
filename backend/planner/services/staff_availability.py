@@ -21,6 +21,7 @@ class StaffAvailability:
         return (
             self.has_days_off(user_id, date)
             or self.has_previous_duty(user_id, date)
+            or self.has_next_duty(user_id, date)
             or self.has_current_duty(user_id, date)
         )
 
@@ -33,6 +34,16 @@ class StaffAvailability:
         if duty_id is None:
             return False
         logger.info("Has previous duty")
+        return self.duty_assignment_repo.user_has_assignment_for_duty_id(
+            user_id, duty_id
+        )
+
+    def has_next_duty(self, user_id: int, date: datetime.date) -> bool:
+        """Matters when filling days before an already planned day, e.g. when
+        regenerating a gap in the middle of a month."""
+        duty_id = self.duty_repo.get_next_duty(date)
+        if duty_id is None:
+            return False
         return self.duty_assignment_repo.user_has_assignment_for_duty_id(
             user_id, duty_id
         )

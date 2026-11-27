@@ -125,6 +125,16 @@ class TestManageAssignments:
         # Check assignment was deleted
         assert not DutyAssignment.objects.filter(id=assignment_id).exists()
 
+    def test_delete_assignment_rolls_back_priority(self, service, duty_assignment):
+        user = duty_assignment.user
+        user.priority = 3
+        user.save()
+
+        service.delete_assignment(duty_assignment.duty.date, user.id)
+
+        user.refresh_from_db()
+        assert user.priority == 2
+
     def test_create_assignment_atomic(self, service, staff_user, duty_day):
         """Test that create_assignment is atomic"""
         # This test verifies that if an error occurs, changes are rolled back
@@ -173,6 +183,25 @@ class TestManageAssignments:
             DutyAssignment.objects.count()
             == assignment_count_before - assignments_for_duty
         )
+
+    def test_bulk_delete_duties_rolls_back_priority(
+        self, service, staff_users, duty_days
+    ):
+        """Each removed assignment gives its person one duty back"""
+        for user in staff_users:
+            user.priority = 5
+            user.save()
+        DutyAssignment.objects.create(user=staff_users[0], duty=duty_days[0])
+        DutyAssignment.objects.create(user=staff_users[0], duty=duty_days[2])
+        DutyAssignment.objects.create(user=staff_users[1], duty=duty_days[0])
+        DutyAssignment.objects.create(user=staff_users[2], duty=duty_days[4])  # kept
+
+        service.bulk_delete_duties_by_id([duty_days[0].id, duty_days[2].id])
+
+        priorities = {u.id: u.priority for u in Staff.objects.all()}
+        assert priorities[staff_users[0].id] == 3
+        assert priorities[staff_users[1].id] == 4
+        assert priorities[staff_users[2].id] == 5
 
     def test_bulk_delete_duties_by_id_empty(self, service, duty_days):
         """Test bulk delete with empty list returns None and leaves DB unchanged"""

@@ -148,6 +148,7 @@ class ManageAssignments:
                 duty_date, user_id
             )
             self.duty_assignment_repo.delete(duty_assignment.id)
+            self.staff_repo.update_priority(user_id, diff=-1)
 
     def make_assignment(
         self, duty_date, prev_user_id: int | None, new_user_id: int | None
@@ -174,8 +175,13 @@ class ManageAssignments:
         return result
 
     def bulk_delete_duties_by_id(self, ids: list[int]) -> int:
-        count = self.duty_repo.bulk_delete_by_id(ids)
-        return count
+        with transaction.atomic():
+            # Give each person back the duties that are being removed, so the
+            # next generation doesn't treat them as already served.
+            removed = self.duty_assignment_repo.count_by_user_for_duty_ids(ids)
+            for user_id, count in removed.items():
+                self.staff_repo.update_priority(user_id, diff=-count)
+            return self.duty_repo.bulk_delete_by_id(ids)
 
     def create_or_update_jira_ticket(
         self, duty_ids: list[int], jira: JiraService

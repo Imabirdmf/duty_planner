@@ -4,8 +4,9 @@ Tests for Planner service (schedule generation logic)
 
 import pytest
 from datetime import timedelta
+from unittest.mock import patch
 from planner.services.planner import Planner
-from planner.models import Duty, DutyAssignment
+from planner.models import Duty, DutyAssignment, Staff
 import logging
 
 logger = logging.getLogger(__name__)
@@ -197,6 +198,71 @@ class TestPlanner:
         assignments = DutyAssignment.objects.filter(duty=duty)
         assigned_user_ids = set(a.user_id for a in assignments)
         assert staff_users[1].id in assigned_user_ids
+
+
+@pytest.mark.django_db
+class TestPlannerFairness:
+    """Regressions: consecutive duties around existing plans, biased ties"""
+
+    @staticmethod
+    def _consecutive_pairs():
+        duties = list(Duty.objects.order_by("date"))
+        people = {
+            d.id: set(
+                DutyAssignment.objects.filter(duty=d).values_list("user_id", flat=True)
+            )
+            for d in duties
+        }
+        return [
+            (a.date, b.date)
+            for a, b in zip(duties, duties[1:])
+            if people[a.id] & people[b.id]
+        ]
+
+    def test_filling_a_day_before_a_planned_day_skips_its_people(
+        self, staff_users, today
+    ):
+        """Regenerating a gap must not put someone on the day right before
+        their existing duty (previously only the day *after* was checked)."""
+        d1, d2, d3 = (today + timedelta(days=i) for i in (1, 2, 3))
+        x, *others = staff_users
+        Staff.objects.filter(id=x.id).update(priority=0)  # X would be picked first
+        Staff.objects.exclude(id=x.id).update(priority=5)
+        DutyAssignment.objects.create(user=others[0], duty=Duty.objects.create(date=d1))
+        duty_2 = Duty.objects.create(date=d2)
+        DutyAssignment.objects.create(user=x, duty=Duty.objects.create(date=d3))
+
+        Planner(d2, d2, people_for_day=1).create_plan()
+
+        assigned = list(
+            DutyAssignment.objects.filter(duty=duty_2).values_list("user_id", flat=True)
+        )
+        assert len(assigned) == 1
+        assert x.id not in assigned
+        assert self._consecutive_pairs() == []
+
+    def test_ties_are_not_broken_by_user_id(self, staff_users, tomorrow):
+        """With equal priorities the pick must be random, not lowest id"""
+        for user in staff_users:
+            user.priority = 0
+            user.save()
+        Duty.objects.create(date=tomorrow)
+        highest_id = max(u.id for u in staff_users)
+        # Give the highest id the smallest random tie-breaker.
+        values = {u.id: (0.0 if u.id == highest_id else 0.9) for u in staff_users}
+        order = iter(
+            [
+                values[u.id]
+                for u in Staff.objects.filter(is_active=True).order_by("email")
+            ]
+        )
+
+        with patch("planner.services.planner.random", side_effect=lambda: next(order)):
+            Planner(tomorrow, tomorrow, people_for_day=1).create_plan()
+
+        assert list(DutyAssignment.objects.values_list("user_id", flat=True)) == [
+            highest_id
+        ]
 
 
 @pytest.mark.django_db

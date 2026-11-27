@@ -18,6 +18,14 @@ class DutyRepository(BaseRepository[Duty]):
             .last()
         )
 
+    def get_next_duty(self, date: datetime.date) -> int | None:
+        return (
+            Duty.objects.filter(date__gt=date)
+            .order_by("date")
+            .values_list("id", flat=True)
+            .first()
+        )
+
     def get_first_element_by_date(self, duty_date: datetime.date) -> Duty | None:
         return Duty.objects.filter(date=duty_date).first()
 
