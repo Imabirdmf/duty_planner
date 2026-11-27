@@ -90,15 +90,24 @@ class DutyAssignmentChangeSerializer(serializers.Serializer):
 
 class DutyWithAssignmentsSerializer(serializers.ModelSerializer):
     users = serializers.SerializerMethodField()
+    is_synced = serializers.SerializerMethodField()
 
     class Meta:
         model = Duty
-        fields = ("id", "date", "users")
+        fields = ("id", "date", "users", "is_synced")
 
     def get_users(self, obj: Duty) -> dict:
         assignments = obj.dutyassignment_set.all()
         users = [a.user for a in assignments]
         return StaffSerializer(users, many=True).data
+
+    def get_is_synced(self, obj: Duty) -> bool:
+        """True when Jira already matches this day: every assignment has an
+        issue and no changes since the last sync. A day with no assignments
+        has nothing to sync."""
+        return all(
+            a.jira_issue_key and a.is_synced for a in obj.dutyassignment_set.all()
+        )
 
 
 class DutyIdsSerializer(serializers.ModelSerializer):

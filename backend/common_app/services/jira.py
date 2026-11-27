@@ -146,6 +146,8 @@ class JiraService:
         ticket_payload = {
             "fields": {
                 "assignee": {"accountId": jira_account_id},
+                # QA Engineer: set to the duty person on create, keep in sync.
+                "customfield_10382": {"accountId": jira_account_id},
                 "customfield_10839": {"id": jira_team_id},
             }
         }
