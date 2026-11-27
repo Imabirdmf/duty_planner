@@ -30,6 +30,28 @@ class TestStaffViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(staff_users)
 
+    def test_list_staff_excludes_inactive(self, api_client, staff_users):
+        """Inactive staff are not returned in the list"""
+        inactive = staff_users[0]
+        inactive.is_active = False
+        inactive.save()
+
+        response = api_client.get("/api/users/")
+
+        assert response.status_code == status.HTTP_200_OK
+        ids = [u["id"] for u in response.data]
+        assert inactive.id not in ids
+        assert len(ids) == len(staff_users) - 1
+
+    def test_retrieve_inactive_staff(self, api_client, staff_user):
+        """Inactive staff are still reachable by id"""
+        staff_user.is_active = False
+        staff_user.save()
+
+        response = api_client.get(f"/api/users/{staff_user.id}/")
+
+        assert response.status_code == status.HTTP_200_OK
+
     def test_create_staff_unauthenticated(self, api_client):
         """Test creating staff without authentication - should fail"""
         data = {"first_name": "Test", "last_name": "User", "email": "test@example.com"}

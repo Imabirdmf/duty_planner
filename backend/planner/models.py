@@ -10,6 +10,7 @@ class Staff(models.Model):
     priority = models.IntegerField(default=0)
     jira_team_id = models.CharField(max_length=100, default="", blank=True)
     jira_account_id = models.CharField(max_length=100, default="", blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         constraints = [

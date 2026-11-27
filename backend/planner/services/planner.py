@@ -66,7 +66,7 @@ class Planner:
         logger.info("duties for month: %s", duties_for_month)
         staff_availability = StaffAvailability()
 
-        staff = self.staff_repo.get_all()
+        staff = self.staff_repo.get_active()
         users = [(user.priority, user.id) for user in staff]
         shuffle(users)
         heapq.heapify(users)
