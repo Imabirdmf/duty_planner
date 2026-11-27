@@ -409,6 +409,28 @@ class TestDutyWithAssignmentsSerializer:
 
         assert set(user_ids) == set(expected_ids)
 
+    def test_is_synced_without_assignments(self, duty_day):
+        """Nothing assigned means nothing to sync"""
+        assert DutyWithAssignmentsSerializer(duty_day).data["is_synced"] is True
+
+    @pytest.mark.parametrize(
+        "assignments, expected",
+        [
+            ([("", False)], False),  # never synced
+            ([("T-1", False)], False),  # assignee changed after sync
+            ([("T-1", True)], True),
+            ([("T-1", True), ("", False)], False),  # one person added later
+            ([("T-1", True), ("T-2", True)], True),
+        ],
+    )
+    def test_is_synced(self, duty_day, staff_users, assignments, expected):
+        for user, (key, synced) in zip(staff_users, assignments):
+            DutyAssignment.objects.create(
+                user=user, duty=duty_day, jira_issue_key=key, is_synced=synced
+            )
+
+        assert DutyWithAssignmentsSerializer(duty_day).data["is_synced"] is expected
+
 
 @pytest.mark.django_db
 class TestDutyIdsSerializer:

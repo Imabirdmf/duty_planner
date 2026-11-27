@@ -602,6 +602,7 @@ const App = () => {
           acc[item.date] = {
             dutyId: item.id,  // ← id дежурства (дня)
             users: item.users.map((u) => ({ id: u.id, name: u.full_name || u.name })),
+            isSynced: item.is_synced,  // Jira matches this day; nothing to send
             };
           return acc;
         }, {});
@@ -696,19 +697,23 @@ const App = () => {
     }
   };
 
+  // Only days changed since the last sync go to Jira (all of them, or the
+  // selected ones when there is a selection).
+  const unsyncedDutyIds = Object.values(timetable)
+    .filter((entry) => entry.dutyId && !entry.isSynced)
+    .map((entry) => entry.dutyId)
+    .filter((id) => selectedDuties.size === 0 || selectedDuties.has(id));
+
   const handleSyncJira = async () => {
-    if (isSyncingJira) return;
+    if (isSyncingJira || unsyncedDutyIds.length === 0) return;
     setIsSyncingJira(true);
     setError(null);
     setJiraSyncMessage(null);
     try {
-      const dutyIds = selectedDuties.size > 0
-        ? Array.from(selectedDuties)
-        : Object.values(timetable).map((entry) => entry.dutyId);
       // Syncing many duties takes longer than the default 5s API timeout.
       const { data } = await api.post(
         "/jira/sync/",
-        { duty_ids: dutyIds },
+        { duty_ids: unsyncedDutyIds },
         { timeout: JIRA_SYNC_TIMEOUT_MS },
       );
       if (data?.message) {
@@ -730,6 +735,8 @@ const App = () => {
       }
     } finally {
       setIsSyncingJira(false);
+      // Refresh is_synced flags so the button reflects what is left to sync.
+      await fetchTimetable();
     }
   };
 
@@ -1169,7 +1176,8 @@ const App = () => {
                 <label className="text-[10px] font-black text-slate-400 uppercase opacity-0 select-none">_</label>
                 <button
                   onClick={handleSyncJira}
-                  disabled={Object.keys(timetable).length === 0 || isSyncingJira}
+                  disabled={unsyncedDutyIds.length === 0 || isSyncingJira}
+                  title={unsyncedDutyIds.length === 0 ? "Nothing to sync: Jira is up to date" : undefined}
                   className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-30 shadow-xl shadow-blue-100 cursor-pointer h-[38px]"
                 >
                   {isSyncingJira ? "Syncing…" : "Sync Jira"}

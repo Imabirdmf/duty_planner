@@ -187,6 +187,7 @@ class TestJiraService:
         payload = call_args[1]["json"]
 
         assert payload["fields"]["assignee"]["accountId"] == "acc-999"
+        assert payload["fields"]["customfield_10382"]["accountId"] == "acc-999"
         assert payload["fields"]["customfield_10839"]["id"] == "team-789"
 
     @patch("common_app.services.jira.requests.Session")
@@ -339,6 +340,33 @@ class TestManageAssignmentsJiraIntegration:
         # Verify no Jira calls were made
         mock_jira_service.bulk_create_issues.assert_not_called()
         mock_jira_service.update_issue.assert_not_called()
+
+    def test_replaced_assignee_is_pushed_to_existing_issue(
+        self, staff_with_jira, staff_user, duty_day, mock_jira_service
+    ):
+        """Swapping the duty person on the front re-targets the linked issue"""
+        from planner.services.assignments import ManageAssignments
+
+        staff_user.jira_account_id = "acc-new"
+        staff_user.jira_team_id = "team-new"
+        staff_user.save()
+        assignment = DutyAssignment.objects.create(
+            user=staff_with_jira, duty=duty_day, jira_issue_key="TEST-1", is_synced=True
+        )
+        service = ManageAssignments()
+
+        service.make_assignment(duty_day.date, staff_with_jira.id, staff_user.id)
+        result = service.create_or_update_jira_ticket(
+            duty_ids=[duty_day.id], jira=mock_jira_service
+        )
+
+        mock_jira_service.update_issue.assert_called_once_with(
+            "TEST-1", "team-new", "acc-new"
+        )
+        mock_jira_service.bulk_create_issues.assert_not_called()
+        assert result["updated"] == 1
+        assignment.refresh_from_db()
+        assert (assignment.user_id, assignment.is_synced) == (staff_user.id, True)
 
     def test_sync_result_reports_partial_failure(
         self, staff_with_jira, staff_user, duty_day, mock_jira_service
