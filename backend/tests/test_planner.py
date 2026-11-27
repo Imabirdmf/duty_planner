@@ -35,6 +35,25 @@ class TestPlanner:
         for user in staff_users:
             user.refresh_from_db()
 
+    def test_create_plan_skips_inactive_staff(self, staff_users, date_range):
+        """Inactive staff are not assigned and their priority is untouched"""
+        for d in date_range["dates"]:
+            Duty.objects.create(date=d)
+        inactive = staff_users[0]
+        inactive.is_active = False
+        inactive.save()
+        initial_priority = inactive.priority
+
+        planner = Planner(
+            start_date=date_range["start"], end_date=date_range["end"], people_for_day=2
+        )
+        planner.create_plan()
+
+        assert DutyAssignment.objects.exists()
+        assert not DutyAssignment.objects.filter(user=inactive).exists()
+        inactive.refresh_from_db()
+        assert inactive.priority == initial_priority
+
     def test_create_plan_with_days_off(self, staff_users, date_range, day_off):
         """Test plan generation respects days off"""
         # Create duty days

@@ -44,8 +44,11 @@ class StaffViewSet(BaseAssignmentViewSet):
     serializer_class = StaffSerializer
 
     def get_queryset(self) -> QuerySet:
-        qs = self.assignments.get_all_staff()
-        return qs
+        # Inactive staff are hidden from the list but still reachable by id,
+        # so they can be retrieved/updated (e.g. re-activated).
+        if self.action == "list":
+            return self.assignments.get_active_staff()
+        return self.assignments.get_all_staff()
 
     @action(detail=False, methods=["get"])
     def stats(self, request):

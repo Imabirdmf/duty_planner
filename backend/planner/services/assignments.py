@@ -84,6 +84,9 @@ class ManageAssignments:
     def get_all_staff(self) -> QuerySet[Staff]:
         return self.staff_repo.get_all()
 
+    def get_active_staff(self) -> QuerySet[Staff]:
+        return self.staff_repo.get_active()
+
     def get_all_duty_assignments(self) -> QuerySet[DutyAssignment]:
         return self.duty_assignment_repo.get_all()
 

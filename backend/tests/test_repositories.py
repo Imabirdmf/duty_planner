@@ -120,6 +120,27 @@ class TestStaffRepository:
         assert min(priorities) == 1
         assert priorities == [1, 2, 3]
 
+    def test_minimum_priority_ignores_inactive(self, repository, staff_users):
+        """Inactive staff neither define the minimum nor get normalized"""
+        priorities = [5, 6, 7, 1]
+        for user, p in zip(staff_users, priorities):
+            Staff.objects.filter(id=user.id).update(priority=p)
+        inactive = staff_users[3]
+        Staff.objects.filter(id=inactive.id).update(is_active=False)
+
+        min_priority = repository.get_minimum_priority()
+        assert min_priority == 5
+
+        repository.set_minimum_priority_for_all(min_priority)
+
+        active = list(
+            Staff.objects.filter(is_active=True)
+            .values_list("priority", flat=True)
+            .order_by("priority")
+        )
+        assert active == [0, 1, 2]
+        assert Staff.objects.get(id=inactive.id).priority == 1
+
 
 @pytest.mark.django_db
 class TestDaysOffRepository:
