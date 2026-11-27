@@ -274,6 +274,36 @@ const RegisterPage = ({ token, onSuccess }) => {
   );
 };
 
+// Month counter uses the same color the Analytics tab gives that month, so the
+// two tabs read the same; the yearly total is neutral.
+const monthColor = (yearMonth, analyticsMonths) => {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const idx = year === new Date().getFullYear() ? analyticsMonths.indexOf(month) : -1;
+  return MONTH_COLORS[(idx >= 0 ? idx : month - 1) % MONTH_COLORS.length];
+};
+
+const DutyCountBadges = ({ counts, month, analyticsMonths }) => {
+  if (!counts) return null;
+  const monthLabel = new Date(`${month}-01`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const badge = "min-w-6 h-6 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black text-white flex-shrink-0";
+  return (
+    <div className="flex items-center gap-1">
+      {counts.month !== null && (
+        <span
+          className={badge}
+          style={{ backgroundColor: monthColor(month, analyticsMonths) }}
+          title={`Duties in ${monthLabel}`}
+        >
+          {counts.month}
+        </span>
+      )}
+      <span className={`${badge} bg-slate-700`} title={`Duties in ${new Date().getFullYear()}`}>
+        {counts.year}
+      </span>
+    </div>
+  );
+};
+
 // Response: { data: [{ user: id, duties: [{ month: int, duty_count: int }] }] }
 const DutyAnalyticsTab = ({ rows, months, loading, error, users }) => {
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -590,6 +620,22 @@ const App = () => {
   }
 }, [users]);
 
+  // Counters for the Staff and Days Off tab, derived from the Analytics data
+  // (/users/stats/ for the current year): duties in the displayed month and in
+  // the whole year. A month from another year has no data, so it's hidden.
+  const [countsYear, countsMonth] = vacationMonth.split("-").map(Number);
+  const countsForUser = (userId) => {
+    if (analyticsLoading || analyticsError) return null;
+    const duties = analyticsRows.find((r) => r.userId === userId)?.duties ?? [];
+    return {
+      month:
+        countsYear === new Date().getFullYear()
+          ? duties.find((d) => d.month === countsMonth)?.duty_count ?? 0
+          : null,
+      year: duties.reduce((sum, d) => sum + d.duty_count, 0),
+    };
+  };
+
   const fetchTimetable = useCallback(async () => {
     const { startDate, endDate } = getMonthRange(currentMonth);
     try {
@@ -641,6 +687,7 @@ const App = () => {
         { params: { start_date: startDate, end_date: endDate } }
       );
       await fetchTimetable();
+      setAnalyticsRefresh((prev) => prev + 1);
     } catch (err) {
       if (err.response?.status === 400) {
         const data = err.response.data;
@@ -691,6 +738,7 @@ const App = () => {
       setDeletedCount(res.data.deleted_duty_count);
       setSelectedDuties(new Set());
       await fetchTimetable();
+      setAnalyticsRefresh((prev) => prev + 1);
       setTimeout(() => setDeletedCount(null), 5000);
     } catch {
       setError("Failed to delete duties");
@@ -1046,8 +1094,15 @@ const App = () => {
                 {users.map((u) => (
                   <tr key={u.id} className="group">
                     <td className="px-6 py-3 whitespace-nowrap whitespace-nowrap bg-slate-50/30 group-hover:bg-slate-50 rounded-l-2xl transition-colors">
-                      <div className="font-bold text-slate-800 text-sm truncate">
-                        {u.full_name || u.name}
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-slate-800 text-sm truncate">
+                          {u.full_name || u.name}
+                        </div>
+                        <DutyCountBadges
+                          counts={countsForUser(u.id)}
+                          month={vacationMonth}
+                          analyticsMonths={analyticsMonths}
+                        />
                       </div>
                       <div className="text-[11px] text-slate-400 truncate mt-0.5">{u.email}</div>
                     </td>
