@@ -554,9 +554,17 @@ class TestViewSetIntegration:
         first_assignment = DutyAssignment.objects.filter(duty=first_duty).first()
 
         if first_assignment:
+            # Pick someone not already on this day: the planner breaks ties
+            # randomly, so any fixed user could already be assigned here.
+            on_duty = set(
+                DutyAssignment.objects.filter(duty=first_duty).values_list(
+                    "user_id", flat=True
+                )
+            )
+            new_user = next(u for u in staff_users if u.id not in on_duty)
             modify_data = {
                 "user_id_prev": first_assignment.user.id,
-                "user_id_new": staff_users[-1].id,
+                "user_id_new": new_user.id,
                 "date": first_duty.date.isoformat(),
             }
             response = authenticated_client.post(

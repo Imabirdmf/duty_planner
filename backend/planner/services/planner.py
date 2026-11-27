@@ -1,6 +1,6 @@
 import heapq
 import logging
-from random import shuffle
+from random import random
 
 from django.db import transaction
 
@@ -67,8 +67,9 @@ class Planner:
         staff_availability = StaffAvailability()
 
         staff = self.staff_repo.get_active()
-        users = [(user.priority, user.id) for user in staff]
-        shuffle(users)
+        # The random middle element breaks ties between equal priorities;
+        # without it the heap always prefers the lowest user id.
+        users = [(user.priority, random(), user.id) for user in staff]
         heapq.heapify(users)
         logger.info(self.people_for_day)
         logger.info("users before generation: %s", users)
@@ -80,15 +81,15 @@ class Planner:
             added_users = []
             while users and count < self.people_for_day:
 
-                user_priority, user_id = heapq.heappop(users)
+                user_priority, tie, user_id = heapq.heappop(users)
                 logger.info("chosen: %s", (user_priority, user_id))
                 if not staff_availability.is_unavailable(user_id, duty.date):
                     self.duty_assignment_repo.create(user_id=user_id, duty=duty)
                     count += 1
-                    added_users.append((user_priority + 1, user_id))
+                    added_users.append((user_priority + 1, tie, user_id))
                     logger.info("added assignment: %s", (user_priority, user_id))
                 else:
-                    added_users.append((user_priority, user_id))
+                    added_users.append((user_priority, tie, user_id))
                     logger.info("not added assignment: %s", (user_priority, user_id))
 
             for user in added_users:
@@ -96,6 +97,6 @@ class Planner:
             logger.info("heap after assignment: %s", users)
             self.save_messages(count, duty)
 
-        for user_priority, user_id in users:
+        for user_priority, _, user_id in users:
             self.update_priority(user_id, value=user_priority)
         return self.messages

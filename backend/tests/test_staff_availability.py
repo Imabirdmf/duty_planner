@@ -57,6 +57,21 @@ class TestStaffAvailability:
         result = availability.has_previous_duty(staff_user.id, duty_day.date)
         assert result is False
 
+    def test_has_next_duty_true(self, availability, duty_days, staff_users):
+        """A person already on the next duty day can't take the day before it"""
+        from planner.models import DutyAssignment
+
+        DutyAssignment.objects.create(user=staff_users[0], duty=duty_days[1])
+
+        assert availability.has_next_duty(staff_users[0].id, duty_days[0].date)
+        assert availability.is_unavailable(staff_users[0].id, duty_days[0].date)
+
+    def test_has_next_duty_false(self, availability, duty_days, staff_users):
+        assert not availability.has_next_duty(staff_users[0].id, duty_days[0].date)
+
+    def test_has_next_duty_no_next_duties(self, availability, duty_day, staff_user):
+        assert not availability.has_next_duty(staff_user.id, duty_day.date)
+
     def test_has_current_duty_true(self, availability, duty_assignment):
         """Test has_current_duty returns True"""
         result = availability.has_current_duty(
