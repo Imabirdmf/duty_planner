@@ -202,8 +202,11 @@ def staff_with_jira(db):
 def mock_jira_service():
     """Mock JiraService for testing"""
     from unittest.mock import Mock
-    from common_app.services.jira import JiraService
+    from common_app.services.jira import BulkCreateResult, JiraService
 
     jira = Mock(spec=JiraService)
-    jira.create_issue.return_value = "TEST-789"
+    # Default: every requested issue is created as TEST-789, TEST-790, ...
+    jira.bulk_create_issues.side_effect = lambda issues: BulkCreateResult(
+        keys={i: f"TEST-{789 + i}" for i in range(len(issues))}
+    )
     return jira

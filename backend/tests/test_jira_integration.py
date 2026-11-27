@@ -7,7 +7,13 @@ from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from rest_framework import status
 from planner.models import Staff, Duty, DutyAssignment
-from common_app.services.jira import JiraService
+import requests
+from common_app.services.jira import (
+    BULK_CREATE_LIMIT,
+    BulkCreateResult,
+    IssueData,
+    JiraService,
+)
 
 
 @pytest.mark.django_db
@@ -24,59 +30,137 @@ class TestJiraService:
         assert service.session is not None
         assert "Authorization" in service.session.headers
 
-    @patch("common_app.services.jira.requests.Session")
-    def test_create_issue_success(self, mock_session, jira_env_vars):
-        """Test successful Jira issue creation"""
-        # Mock response
-        mock_response = Mock()
-        mock_response.status_code = 201
-        mock_response.json.return_value = {"key": "TEST-456"}
-
-        mock_session_instance = Mock()
-        mock_session_instance.post.return_value = mock_response
-        mock_session.return_value = mock_session_instance
-
+    @staticmethod
+    def _service_with_post(*responses):
         service = JiraService()
-        service.session = mock_session_instance
+        service.session = Mock()
+        service.session.post.side_effect = list(responses)
+        return service
 
-        test_date = date(2024, 3, 15)
-        issue_key = service.create_issue(
-            date=test_date, jira_team_id="team-123", jira_account_id="acc-456"
+    @staticmethod
+    def _response(status_code, body):
+        response = Mock()
+        response.status_code = status_code
+        response.json.return_value = body
+        response.text = str(body)
+        return response
+
+    @staticmethod
+    def _issues(n, day=None):
+        day = day or date.today()
+        return [
+            IssueData(day + timedelta(days=i), "team", f"acc-{i}") for i in range(n)
+        ]
+
+    def test_bulk_create_all_success(self, jira_env_vars):
+        service = self._service_with_post(
+            self._response(
+                201,
+                {"issues": [{"key": "TEST-1"}, {"key": "TEST-2"}], "errors": []},
+            )
         )
 
-        assert issue_key == "TEST-456"
-        assert mock_session_instance.post.called
+        result = service.bulk_create_issues(self._issues(2))
 
-        # Verify payload
-        call_args = mock_session_instance.post.call_args
-        payload = call_args[1]["json"]
+        assert result.keys == {0: "TEST-1", 1: "TEST-2"}
+        assert result.errors == {}
+        call = service.session.post.call_args
+        assert call.kwargs["url"] == "https://test.atlassian.net/rest/api/3/issue/bulk"
+        updates = call.kwargs["json"]["issueUpdates"]
+        assert len(updates) == 2
+        assert updates[0]["fields"]["project"]["key"] == "TEST"
+        assert updates[1]["fields"]["assignee"]["accountId"] == "acc-1"
 
-        assert payload["fields"]["project"]["key"] == "TEST"
-        assert payload["fields"]["summary"] == f"Регресс {test_date}"
-        assert payload["fields"]["assignee"]["accountId"] == "acc-456"
-        assert payload["fields"]["customfield_10839"]["id"] == "team-123"
-
-    @patch("common_app.services.jira.requests.Session")
-    def test_create_issue_failure(self, mock_session, jira_env_vars):
-        """Test Jira issue creation failure"""
-        # Mock failed response
-        mock_response = Mock()
-        mock_response.status_code = 400
-        mock_response.text = "Bad Request"
-
-        mock_session_instance = Mock()
-        mock_session_instance.post.return_value = mock_response
-        mock_session.return_value = mock_session_instance
-
-        service = JiraService()
-        service.session = mock_session_instance
-
-        with pytest.raises(Exception, match="Bad Request"):
-            service.create_issue(
-                date=date(2024, 3, 15),
-                jira_team_id="team-123",
-                jira_account_id="acc-456",
+    def test_bulk_create_partial_failure_maps_keys_by_index(self, jira_env_vars):
+        service = self._service_with_post(
+            self._response(
+                201,
+                {
+                    "issues": [{"key": "TEST-1"}, {"key": "TEST-3"}],
+                    "errors": [
+                        {
+                            "failedElementNumber": 1,
+                            "status": 400,
+                            "elementErrors": {
+                                "errorMessages": [],
+                                "errors": {"assignee": "User cannot be assigned"},
+                            },
+                        }
+                    ],
+                },
             )
+        )
+
+        result = service.bulk_create_issues(self._issues(3))
+
+        assert result.keys == {0: "TEST-1", 2: "TEST-3"}
+        assert result.errors == {1: "assignee: User cannot be assigned"}
+
+    def test_bulk_create_all_failed_400(self, jira_env_vars):
+        service = self._service_with_post(
+            self._response(
+                400,
+                {
+                    "issues": [],
+                    "errors": [
+                        {
+                            "failedElementNumber": 0,
+                            "elementErrors": {"errorMessages": ["Bad project"]},
+                        }
+                    ],
+                },
+            )
+        )
+
+        result = service.bulk_create_issues(self._issues(1))
+
+        assert result.keys == {}
+        assert result.errors == {0: "Bad project"}
+
+    def test_bulk_create_auth_error_marks_whole_chunk(self, jira_env_vars):
+        service = self._service_with_post(
+            self._response(401, {"errorMessages": ["Unauthorized"]})
+        )
+
+        result = service.bulk_create_issues(self._issues(2))
+
+        assert result.keys == {}
+        assert result.errors == {0: "Unauthorized", 1: "Unauthorized"}
+
+    def test_bulk_create_network_error_marks_whole_chunk(self, jira_env_vars):
+        service = JiraService()
+        service.session = Mock()
+        service.session.post.side_effect = requests.ConnectionError("boom")
+
+        result = service.bulk_create_issues(self._issues(2))
+
+        assert result.errors == {0: "boom", 1: "boom"}
+
+    def test_bulk_create_chunks_and_keeps_earlier_chunk_on_failure(self, jira_env_vars):
+        n = BULK_CREATE_LIMIT + 1
+        first = self._response(
+            201,
+            {
+                "issues": [{"key": f"TEST-{i}"} for i in range(BULK_CREATE_LIMIT)],
+                "errors": [],
+            },
+        )
+        second = self._response(500, {"errorMessages": ["Jira is down"]})
+        service = self._service_with_post(first, second)
+
+        result = service.bulk_create_issues(self._issues(n))
+
+        assert service.session.post.call_count == 2
+        assert len(result.keys) == BULK_CREATE_LIMIT
+        assert result.errors == {BULK_CREATE_LIMIT: "Jira is down"}
+
+    def test_bulk_create_empty_makes_no_request(self, jira_env_vars):
+        service = self._service_with_post()
+
+        result = service.bulk_create_issues([])
+
+        assert result == BulkCreateResult()
+        service.session.post.assert_not_called()
 
     @patch("common_app.services.jira.requests.Session")
     def test_update_issue_success(self, mock_session, jira_env_vars):
@@ -193,9 +277,9 @@ class TestManageAssignmentsJiraIntegration:
             duty_ids=[duty_day.id], jira=mock_jira_service  # Changed from assignment.id
         )
 
-        # Verify Jira issue was created
-        mock_jira_service.create_issue.assert_called_once_with(
-            duty_day.date, "team-123", "acc-456"
+        # Verify Jira issue was created via bulk API
+        mock_jira_service.bulk_create_issues.assert_called_once_with(
+            [IssueData(duty_day.date, "team-123", "acc-456")]
         )
 
         # Verify assignment was updated
@@ -253,8 +337,70 @@ class TestManageAssignmentsJiraIntegration:
         )
 
         # Verify no Jira calls were made
-        mock_jira_service.create_issue.assert_not_called()
+        mock_jira_service.bulk_create_issues.assert_not_called()
         mock_jira_service.update_issue.assert_not_called()
+
+    def test_sync_result_reports_partial_failure(
+        self, staff_with_jira, staff_user, duty_day, mock_jira_service
+    ):
+        """Created, updated and failed assignments are all reported"""
+        from planner.services.assignments import ManageAssignments
+
+        ok = DutyAssignment.objects.create(user=staff_with_jira, duty=duty_day)
+        bad = DutyAssignment.objects.create(user=staff_user, duty=duty_day)
+        # Fail only the issue for staff_user (no Jira account), wherever it sits.
+        mock_jira_service.bulk_create_issues.side_effect = lambda issues: (
+            BulkCreateResult(
+                keys={
+                    i: "TEST-1"
+                    for i, x in enumerate(issues)
+                    if x.jira_account_id == "acc-456"
+                },
+                errors={
+                    i: "assignee: invalid"
+                    for i, x in enumerate(issues)
+                    if x.jira_account_id != "acc-456"
+                },
+            )
+        )
+
+        result = ManageAssignments().create_or_update_jira_ticket(
+            duty_ids=[duty_day.id], jira=mock_jira_service
+        )
+
+        assert result["created"] == 1
+        assert result["updated"] == 0
+        assert result["skipped"] == 0
+        assert result["failed"] == [
+            {
+                "date": duty_day.date.isoformat(),
+                "user": staff_user.full_name,
+                "message": "assignee: invalid",
+            }
+        ]
+        ok.refresh_from_db()
+        bad.refresh_from_db()
+        assert (ok.jira_issue_key, ok.is_synced) == ("TEST-1", True)
+        assert (bad.jira_issue_key, bad.is_synced) == ("", False)
+
+    def test_sync_result_reports_update_failure(
+        self, staff_with_jira, duty_day, mock_jira_service
+    ):
+        from planner.services.assignments import ManageAssignments
+
+        assignment = DutyAssignment.objects.create(
+            user=staff_with_jira, duty=duty_day, jira_issue_key="TEST-1"
+        )
+        mock_jira_service.update_issue.side_effect = requests.HTTPError("not found")
+
+        result = ManageAssignments().create_or_update_jira_ticket(
+            duty_ids=[duty_day.id], jira=mock_jira_service
+        )
+
+        assert result["updated"] == 0
+        assert result["failed"][0]["message"] == "not found"
+        assignment.refresh_from_db()
+        assert assignment.is_synced is False
 
 
 @pytest.mark.django_db
@@ -290,7 +436,9 @@ class TestJiraSyncView:
 
         # Mock JiraService
         mock_jira_instance = Mock()
-        mock_jira_instance.create_issue.return_value = "TEST-789"
+        mock_jira_instance.bulk_create_issues.return_value = BulkCreateResult(
+            keys={0: "TEST-789"}
+        )
         mock_jira_service_class.return_value = mock_jira_instance
 
         # Pass duty.id, not assignment.id!
@@ -299,7 +447,9 @@ class TestJiraSyncView:
         response = authenticated_client.post("/api/jira/sync/", data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["success"] == "Everything is synced with Jira"
+        assert response.data["message"] == "Synced with Jira: 1 created"
+        assert response.data["created"] == 1
+        assert response.data["failed"] == []
 
     @patch("planner.views.JiraService")
     def test_jira_sync_missing_duty_ids(
@@ -339,7 +489,7 @@ class TestJiraSyncView:
 
         # Mock JiraService to raise exception
         mock_jira_instance = Mock()
-        mock_jira_instance.create_issue.side_effect = Exception("Jira API error")
+        mock_jira_instance.bulk_create_issues.side_effect = Exception("Jira API error")
         mock_jira_service_class.return_value = mock_jira_instance
 
         # Pass duty.id, not assignment.id!
@@ -348,7 +498,53 @@ class TestJiraSyncView:
         response = authenticated_client.post("/api/jira/sync/", data, format="json")
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert "error" in response.data
+        assert response.data["error"] == "Jira sync failed: Jira API error"
+
+    @patch("planner.views.JiraService")
+    def test_jira_sync_reports_failures_with_200(
+        self,
+        mock_jira_service_class,
+        authenticated_client,
+        staff_with_jira,
+        duty_day,
+        jira_env_vars,
+    ):
+        """Per-assignment Jira errors come back in `failed`, not as a 500"""
+        DutyAssignment.objects.create(user=staff_with_jira, duty=duty_day)
+        mock_jira_instance = Mock()
+        mock_jira_instance.bulk_create_issues.return_value = BulkCreateResult(
+            errors={0: "Bad project"}
+        )
+        mock_jira_service_class.return_value = mock_jira_instance
+
+        response = authenticated_client.post(
+            "/api/jira/sync/", {"duty_ids": [duty_day.id]}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] is None
+        assert response.data["failed"][0]["message"] == "Bad project"
+
+    @patch("planner.views.JiraService")
+    def test_jira_sync_nothing_to_do(
+        self,
+        mock_jira_service_class,
+        authenticated_client,
+        staff_with_jira,
+        duty_day,
+        jira_env_vars,
+    ):
+        DutyAssignment.objects.create(
+            user=staff_with_jira, duty=duty_day, jira_issue_key="T-1", is_synced=True
+        )
+
+        response = authenticated_client.post(
+            "/api/jira/sync/", {"duty_ids": [duty_day.id]}, format="json"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Everything is already synced with Jira"
+        assert response.data["skipped"] == 1
 
 
 @pytest.mark.django_db

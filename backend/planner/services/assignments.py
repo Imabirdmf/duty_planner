@@ -1,8 +1,10 @@
 import datetime
 import itertools
 import logging
+from typing import TypedDict
 
-from common_app.services.jira import JiraService
+import requests
+from common_app.services.jira import IssueData, JiraService
 from django.db import transaction
 from django.db.models import QuerySet
 from planner.models import DaysOff, Duty, DutyAssignment, Staff
@@ -15,6 +17,27 @@ from planner.services.repositories.duty_repository import DutyRepository
 from planner.services.repositories.staff_repository import StaffRepository
 
 logger = logging.getLogger(__name__)
+
+
+class JiraSyncFailure(TypedDict):
+    date: str
+    user: str
+    message: str
+
+
+class JiraSyncResult(TypedDict):
+    created: int
+    updated: int
+    skipped: int
+    failed: list[JiraSyncFailure]
+
+
+def _sync_failure(assignment: DutyAssignment, message: str) -> JiraSyncFailure:
+    return {
+        "date": assignment.duty.date.isoformat(),
+        "user": assignment.user.full_name,
+        "message": message,
+    }
 
 
 class ManageAssignments:
@@ -154,23 +177,55 @@ class ManageAssignments:
         count = self.duty_repo.bulk_delete_by_id(ids)
         return count
 
-    def create_or_update_jira_ticket(self, duty_ids: list[int], jira: JiraService):
-        duties = self.duty_assignment_repo.get_list_by_duty_ids(duty_ids)
-        for duty in duties:
-            with transaction.atomic():
-                if not duty.jira_issue_key:
-                    issue_key = jira.create_issue(
-                        duty.duty.date,
-                        duty.user.jira_team_id,
-                        duty.user.jira_account_id,
-                    )
+    def create_or_update_jira_ticket(
+        self, duty_ids: list[int], jira: JiraService
+    ) -> JiraSyncResult:
+        assignments = list(
+            self.duty_assignment_repo.get_list_by_duty_ids(duty_ids).order_by(
+                "duty__date", "user__last_name"
+            )
+        )
+        to_create = [a for a in assignments if not a.jira_issue_key]
+        to_update = [a for a in assignments if a.jira_issue_key and not a.is_synced]
+        result: JiraSyncResult = {
+            "created": 0,
+            "updated": 0,
+            "skipped": len(assignments) - len(to_create) - len(to_update),
+            "failed": [],
+        }
+
+        if to_create:
+            created = jira.bulk_create_issues(
+                [
+                    IssueData(a.duty.date, a.user.jira_team_id, a.user.jira_account_id)
+                    for a in to_create
+                ]
+            )
+            for idx, assignment in enumerate(to_create):
+                if idx in created.keys:
+                    # Persist right away so a retry never creates a duplicate issue.
                     self.duty_assignment_repo.update(
-                        duty.id, jira_issue_key=issue_key, is_synced=True
+                        assignment.id,
+                        jira_issue_key=created.keys[idx],
+                        is_synced=True,
                     )
-                elif not duty.is_synced:
-                    jira.update_issue(
-                        duty.jira_issue_key,
-                        duty.user.jira_team_id,
-                        duty.user.jira_account_id,
-                    )
-                    self.duty_assignment_repo.update(duty.id, is_synced=True)
+                    result["created"] += 1
+                else:
+                    message = created.errors.get(idx, "Issue was not created")
+                    result["failed"].append(_sync_failure(assignment, message))
+
+        for assignment in to_update:
+            try:
+                jira.update_issue(
+                    assignment.jira_issue_key,
+                    assignment.user.jira_team_id,
+                    assignment.user.jira_account_id,
+                )
+            except requests.RequestException as e:
+                logger.warning("Jira update failed for %s: %s", assignment.id, e)
+                result["failed"].append(_sync_failure(assignment, str(e)))
+                continue
+            self.duty_assignment_repo.update(assignment.id, is_synced=True)
+            result["updated"] += 1
+
+        return result
