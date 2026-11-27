@@ -30,6 +30,7 @@ const MONTH_COLORS = [
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const toMonthLabel = (m) => MONTH_NAMES[(Number(m) - 1) % 12] ?? String(m);
+const JIRA_SYNC_TIMEOUT_MS = 120000;
 
 // ── Login Page ────────────────────────────────────────────────────────────────
 const LoginPage = ({ onLogin, onGoogleLogin, modal = false }) => {
@@ -491,7 +492,8 @@ const App = () => {
   const [error, setError] = useState(null);
   const [warnings, setWarnings] = useState([]);
   const [highlightedDates, setHighlightedDates] = useState(new Set());
-  const [jiraSynced, setJiraSynced] = useState(false);
+  const [jiraSyncMessage, setJiraSyncMessage] = useState(null);
+  const [isSyncingJira, setIsSyncingJira] = useState(false);
 
   const [activeEditPopover, setActiveEditPopover] = useState(null);
   const [activeAddUserPopover, setActiveAddUserPopover] = useState(null);
@@ -695,23 +697,39 @@ const App = () => {
   };
 
   const handleSyncJira = async () => {
+    if (isSyncingJira) return;
+    setIsSyncingJira(true);
+    setError(null);
+    setJiraSyncMessage(null);
     try {
       const dutyIds = selectedDuties.size > 0
         ? Array.from(selectedDuties)
         : Object.values(timetable).map((entry) => entry.dutyId);
-      await api.post("/jira/sync/", { duty_ids: dutyIds });
-      setJiraSynced(true);
-      setTimeout(() => setJiraSynced(false), 5000);
-    } catch (err) {
-      try {
-        const data = err.response?.data;
-        const raw = Array.isArray(data?.error) ? data.error[0] : data?.error;
-        const parsed = JSON.parse(raw);
-        const message = parsed?.errorMessages?.[0] || "Not synced";
-        setError(message);
-      } catch {
-        setError("Not synced");
+      // Syncing many duties takes longer than the default 5s API timeout.
+      const { data } = await api.post(
+        "/jira/sync/",
+        { duty_ids: dutyIds },
+        { timeout: JIRA_SYNC_TIMEOUT_MS },
+      );
+      if (data?.message) {
+        setJiraSyncMessage(data.message);
+        setTimeout(() => setJiraSyncMessage(null), 5000);
       }
+      const failed = data?.failed || [];
+      if (failed.length > 0) {
+        const details = failed
+          .map((f) => `${f.date} ${f.user}: ${f.message}`)
+          .join("; ");
+        setError(`Failed to sync ${failed.length} with Jira: ${details}`);
+      }
+    } catch (err) {
+      if (err.code === "ECONNABORTED") {
+        setError("Jira sync is taking too long. Check Jira before retrying.");
+      } else {
+        setError(err.response?.data?.error || "Not synced");
+      }
+    } finally {
+      setIsSyncingJira(false);
     }
   };
 
@@ -857,12 +875,12 @@ const App = () => {
             </div>
           </div>  
         )}
-        {jiraSynced && (
+        {jiraSyncMessage && (
           <div className="sticky top-0 z-[300]">
             <div className="bg-green-50 border-2 border-green-200 text-green-800 p-4 rounded-2xl shadow-lg">
               <div className="flex items-center gap-3">
                 <Check size={20} className="flex-shrink-0" />
-                <span className="font-bold text-sm">Everything is synced with Jira</span>
+                <span className="font-bold text-sm">{jiraSyncMessage}</span>
               </div>
             </div>
           </div>
@@ -1151,10 +1169,10 @@ const App = () => {
                 <label className="text-[10px] font-black text-slate-400 uppercase opacity-0 select-none">_</label>
                 <button
                   onClick={handleSyncJira}
-                  disabled={Object.keys(timetable).length === 0}
+                  disabled={Object.keys(timetable).length === 0 || isSyncingJira}
                   className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-30 shadow-xl shadow-blue-100 cursor-pointer h-[38px]"
                 >
-                  Sync Jira
+                  {isSyncingJira ? "Syncing…" : "Sync Jira"}
                 </button>
               </div>
               </div>

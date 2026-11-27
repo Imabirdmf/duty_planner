@@ -23,7 +23,7 @@ from .serializers import (
     StaffDutyStatsSerializer,
     StaffSerializer,
 )
-from .services.assignments import ManageAssignments
+from .services.assignments import JiraSyncResult, ManageAssignments
 
 logger = logging.getLogger(__name__)
 
@@ -202,20 +202,36 @@ class JiraSyncView(APIView):
 
     def post(self, request):
         objects_ids = request.data.get("duty_ids")
-        try:
-            if objects_ids:
-                self.assignments.create_or_update_jira_ticket(
-                    duty_ids=objects_ids, jira=self.jira
-                )
-                return Response(
-                    data={"success": "Everything is synced with Jira"},
-                    status=status.HTTP_200_OK,
-                )
-            else:
-                return Response(
-                    data={"error": "Not synced"}, status=status.HTTP_400_BAD_REQUEST
-                )
-        except Exception as e:
+        if not objects_ids:
             return Response(
-                data={"error": {str(e)}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data={"error": "No duties selected for Jira sync"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            result = self.assignments.create_or_update_jira_ticket(
+                duty_ids=objects_ids, jira=self.jira
+            )
+        except Exception as e:
+            logger.exception("Jira sync failed")
+            return Response(
+                data={"error": f"Jira sync failed: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        return Response(
+            data={"message": jira_sync_message(result), **result},
+            status=status.HTTP_200_OK,
+        )
+
+
+def jira_sync_message(result: JiraSyncResult) -> str | None:
+    """Human-readable summary of what succeeded; failures are listed separately."""
+    parts = []
+    if result["created"]:
+        parts.append(f"{result['created']} created")
+    if result["updated"]:
+        parts.append(f"{result['updated']} updated")
+    if parts:
+        return "Synced with Jira: " + ", ".join(parts)
+    if not result["failed"]:
+        return "Everything is already synced with Jira"
+    return None
